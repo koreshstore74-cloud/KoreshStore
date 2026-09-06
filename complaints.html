@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>الشكاوى والاقتراحات | Koresh Store</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:,">
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<section class="page-hero">
+  <div class="wrap">
+    <h1>الشكاوى والاقتراحات</h1>
+    <p>رأيك بيهمنا — ابعتلنا شكوى أو اقتراح وهنرد عليك في أسرع وقت</p>
+  </div>
+</section>
+
+<section class="page-content">
+  <div class="wrap grid-2" id="complaintsLayout">
+
+    <div class="card">
+      <h3 style="margin-top:0">قدّم شكوى أو اقتراح</h3>
+      <form id="complaintForm">
+        <div class="form-grid">
+          <div class="field"><label>الاسم</label><input type="text" id="compName" required></div>
+          <div class="field"><label>رقم الموبايل</label><input type="tel" id="compPhone" required placeholder="01xxxxxxxxx"></div>
+          <div class="field full">
+            <label>النوع</label>
+            <select id="compType">
+              <option>شكوى بخصوص طلب</option>
+              <option>مشكلة في منتج</option>
+              <option>تأخير في الشحن</option>
+              <option>اقتراح لتحسين الموقع</option>
+              <option>أخرى</option>
+            </select>
+          </div>
+          <div class="field full"><label>رقم الطلب (لو موجود)</label><input type="text" id="compOrder" placeholder="مثال: KS-AB12C"></div>
+          <div class="field full"><label>التفاصيل</label><textarea id="compMessage" required placeholder="اكتب مشكلتك أو اقتراحك بالتفصيل..."></textarea></div>
+        </div>
+        <button type="submit" class="btn btn-primary" style="margin-top:18px;width:100%">إرسال</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">تابع حالة شكواك</h3>
+      <p class="form-note" style="margin-bottom:16px">اكتب رقم الموبايل اللي بعتّ بيه الشكوى</p>
+      <div class="field" style="margin-bottom:14px">
+        <input type="text" id="checkPhone" placeholder="01xxxxxxxxx">
+      </div>
+      <button class="btn btn-dark" onclick="checkMyComplaints()">عرض شكاويّ</button>
+      <div id="myComplaints" style="margin-top:20px"></div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="success-box" id="complaintSuccess" style="display:none;max-width:640px;margin:24px auto 0;text-align:center"></div>
+  </div>
+</section>
+
+<div id="site-footer"></div>
+
+<script src="js/data.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/layout.js"></script>
+<script>
+  renderLayout("complaints");
+
+  document.getElementById("complaintForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const complaint = {
+      id: KS.uid(),
+      date: new Date().toISOString(),
+      name: document.getElementById("compName").value,
+      phone: document.getElementById("compPhone").value,
+      type: document.getElementById("compType").value,
+      orderId: document.getElementById("compOrder").value,
+      message: document.getElementById("compMessage").value,
+      status: "جديدة"
+    };
+    KS.addComplaint(complaint);
+
+    document.getElementById("complaintsLayout").style.display = "none";
+    const box = document.getElementById("complaintSuccess");
+    box.style.display = "block";
+    box.innerHTML = `
+      تم استلام شكواك بنجاح 🙏 هنتواصل معاك في أقرب وقت ممكن.<br><br>
+      <a href="index.html" class="btn btn-dark">الرجوع للمتجر</a>
+    `;
+  });
+
+  function statusClass(status) {
+    return "status-" + status.replace(/\s+/g, "-");
+  }
+
+  function checkMyComplaints() {
+    const phone = document.getElementById("checkPhone").value.trim();
+    const box = document.getElementById("myComplaints");
+    if (!phone) { box.innerHTML = `<div class="warn-note">اكتب رقم الموبايل الأول</div>`; return; }
+    const list = KS.getComplaints().filter(c => c.phone === phone);
+    if (list.length === 0) {
+      box.innerHTML = `<div class="empty-state">مفيش شكاوى مسجلة بالرقم ده على المتصفح ده</div>`;
+      return;
+    }
+    box.innerHTML = list.map(c => `
+      <div class="complaint-row">
+        <div>
+          <strong>${c.type}</strong>
+          <p style="margin:6px 0;color:var(--ink-soft);font-size:14px">${c.message}</p>
+          <span style="font-size:12.5px;color:#9b9584">${new Date(c.date).toLocaleDateString("ar-EG")}</span>
+        </div>
+        <span class="status-pill ${statusClass(c.status)}">${c.status}</span>
+      </div>
+    `).join("");
+  }
+</script>
+</body>
+</html>

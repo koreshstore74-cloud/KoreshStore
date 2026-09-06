@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>إتمام الطلب | Koresh Store</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:,">
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<section class="page-hero">
+  <div class="wrap">
+    <h1>إتمام الطلب</h1>
+    <p>راجع طلبك واكتب بياناتك، وهنتواصل معاك لتأكيد التوصيل</p>
+  </div>
+</section>
+
+<section class="page-content">
+  <div class="wrap grid-checkout" id="checkoutLayout">
+
+    <div class="card">
+      <h3 style="margin-top:0">بياناتك</h3>
+      <form id="checkoutForm">
+        <div class="form-grid">
+          <div class="field"><label>الاسم بالكامل</label><input type="text" id="cName" required></div>
+          <div class="field"><label>رقم الموبايل</label><input type="tel" id="cPhone" required pattern="^01[0-9]{9}$" placeholder="01xxxxxxxxx"></div>
+          <div class="field full"><label>العنوان بالتفصيل</label><input type="text" id="cAddress" required placeholder="المحافظة، المدينة، الشارع، رقم العقار"></div>
+          <div class="field"><label>طريقة الدفع</label>
+            <select id="cPayment">
+              <option>الدفع عند الاستلام</option>
+              <option>تحويل بنكي</option>
+              <option>فودافون كاش</option>
+            </select>
+          </div>
+          <div class="field"><label>ملاحظات (اختياري)</label><input type="text" id="cNotes" placeholder="مثلاً: اتصل قبل التوصيل"></div>
+        </div>
+        <button type="submit" class="btn btn-primary" style="margin-top:20px;width:100%">تأكيد الطلب</button>
+      </form>
+    </div>
+
+    <div class="card" style="height:fit-content">
+      <h3 style="margin-top:0">ملخص الطلب</h3>
+      <div id="summaryItems"></div>
+      <div class="cart-total-row" style="margin-top:16px;border-top:1px solid var(--line);padding-top:16px">
+        <span>الإجمالي</span><span id="summaryTotal"></span>
+      </div>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="success-box" id="orderSuccess" style="display:none;max-width:640px;margin:24px auto 0;text-align:center"></div>
+  </div>
+</section>
+
+<div id="site-footer"></div>
+
+<script src="js/data.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/layout.js"></script>
+<script>
+  renderLayout(null);
+
+  function renderSummary() {
+    const cart = KS.getCart();
+    const box = document.getElementById("summaryItems");
+    if (cart.length === 0) {
+      box.innerHTML = `<div class="empty-state">السلة فاضية. <a href="index.html#products" style="color:var(--clay)">ارجع للمنتجات</a></div>`;
+      document.querySelector("#checkoutForm button").disabled = true;
+    } else {
+      box.innerHTML = cart.map(i => `
+        <div class="cart-item">
+          <img src="${i.image}" alt="${i.name}">
+          <div class="info">
+            <h5>${i.name} × ${i.qty}</h5>
+            <div class="meta">${[i.size, i.color].filter(Boolean).join(" · ") || i.category}</div>
+            <div class="meta">${KS.fmt(i.price * i.qty)}</div>
+          </div>
+        </div>
+      `).join("");
+    }
+    document.getElementById("summaryTotal").textContent = KS.fmt(KS.cartTotal());
+  }
+  renderSummary();
+
+  document.getElementById("checkoutForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const cart = KS.getCart();
+    if (cart.length === 0) return;
+    const order = {
+      id: "KS-" + KS.uid().toUpperCase(),
+      date: new Date().toISOString(),
+      name: document.getElementById("cName").value,
+      phone: document.getElementById("cPhone").value,
+      address: document.getElementById("cAddress").value,
+      payment: document.getElementById("cPayment").value,
+      notes: document.getElementById("cNotes").value,
+      items: cart,
+      total: KS.cartTotal(),
+      status: "قيد التجهيز"
+    };
+    KS.addOrder(order);
+    KS.clearCart();
+    updateCartCount();
+
+    document.getElementById("checkoutLayout").style.display = "none";
+    const box = document.getElementById("orderSuccess");
+    box.style.display = "block";
+    box.innerHTML = `
+      تم استلام طلبك بنجاح 🎉<br>
+      رقم الطلب: <strong>${order.id}</strong><br>
+      احتفظ بالرقم ده عشان تقدر تتابع حالة طلبك من صفحة "تتبّع طلبك".<br><br>
+      <a href="track-order.html" class="btn btn-dark">تتبّع الطلب الآن</a>
+      <a href="index.html" class="btn btn-ghost">الرجوع للمتجر</a>
+    `;
+  });
+</script>
+</body>
+</html>

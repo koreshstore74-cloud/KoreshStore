@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Koresh Store | كل اللي محتاجه في مكان واحد</title>
+<meta name="description" content="متجر Koresh Store — إلكترونيات، موبايلات، أزياء، ومنتجات منزلية بأسعار مباشرة وشحن سريع لكل المحافظات.">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:,">
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<section class="hero">
+  <div class="wrap hero-inner">
+    <div>
+      <div class="hero-eyebrow">Koresh Store</div>
+      <h1>كل اللي محتاجه<br><span>في مكان واحد</span></h1>
+      <p>إلكترونيات، موبايلات، أزياء، ومنتجات منزلية — أقسام واضحة، أسعار مباشرة، وشحن لحد باب البيت في كل المحافظات.</p>
+      <div class="hero-cta">
+        <a href="#products" class="btn btn-primary">تسوّق دلوقتي</a>
+        <a href="#" data-wa-link data-wa-text="مرحبًا، عندي سؤال عن منتج" target="_blank" rel="noopener" class="btn btn-outline">اسأل عن منتج</a>
+      </div>
+    </div>
+    <div class="hero-3d" id="hero3d"></div>
+  </div>
+</section>
+
+<section class="trust-strip">
+  <div class="wrap trust-grid">
+    <div class="trust-item">
+      <div class="ic">🚚</div>
+      <div><h4>شحن سريع وآمن</h4><p>لحد باب البيت في كل المحافظات</p></div>
+    </div>
+    <div class="trust-item">
+      <div class="ic">💵</div>
+      <div><h4>الدفع عند الاستلام</h4><p>راجع طلبك قبل ما تدفع</p></div>
+    </div>
+    <div class="trust-item">
+      <div class="ic">↩️</div>
+      <div><h4>استبدال سهل</h4><p>خلال 14 يوم من الاستلام</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="products">
+  <div class="wrap">
+    <div class="section-head">
+      <div>
+        <h2>كل منتجات Koresh Store</h2>
+        <p id="productCount">— منتج متاح</p>
+      </div>
+      <select id="sortSelect" class="field" style="padding:10px 14px;border-radius:10px;border:1px solid var(--line)">
+        <option value="featured">الترتيب: المميزة أولًا</option>
+        <option value="discount">أكبر خصم</option>
+        <option value="price-asc">الأقل سعرًا</option>
+        <option value="price-desc">الأعلى سعرًا</option>
+      </select>
+    </div>
+    <div class="cat-row" id="catRow"></div>
+    <div class="product-grid" id="productGrid"></div>
+  </div>
+</section>
+
+<div id="site-footer"></div>
+
+<!-- Variant selection modal -->
+<div class="modal-overlay" id="variantOverlay">
+  <div class="modal" id="variantModal"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="js/data.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/layout.js"></script>
+<script src="js/hero3d.js"></script>
+<script src="js/store.js"></script>
+<script>
+  renderLayout("home");
+  initHero3D("hero3d");
+  document.getElementById("variantOverlay").addEventListener("click", (e) => {
+    if (e.target.id === "variantOverlay") closeVariantModal();
+  });
+</script>
+</body>
+</html>

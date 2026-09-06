@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>تتبّع طلبك | Koresh Store</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:,">
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<section class="page-hero">
+  <div class="wrap">
+    <h1>تتبّع طلبك</h1>
+    <p>اكتب رقم الطلب أو رقم الموبايل اللي طلبت بيه عشان تعرف حالة الشحن</p>
+  </div>
+</section>
+
+<section class="page-content">
+  <div class="wrap" style="max-width:640px">
+    <div class="card">
+      <div class="form-grid">
+        <div class="field full">
+          <label>رقم الطلب أو رقم الموبايل</label>
+          <input type="text" id="trackInput" placeholder="مثال: KS-AB12C أو 01xxxxxxxxx">
+        </div>
+      </div>
+      <button class="btn btn-primary" style="margin-top:16px" onclick="trackOrder()">تتبّع الطلب</button>
+    </div>
+
+    <div id="trackResult" style="margin-top:24px"></div>
+  </div>
+</section>
+
+<div id="site-footer"></div>
+
+<script src="js/data.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/layout.js"></script>
+<script>
+  renderLayout("track");
+
+  const statusSteps = ["قيد التجهيز", "تم الشحن", "في الطريق", "تم التوصيل"];
+
+  function trackOrder() {
+    const q = document.getElementById("trackInput").value.trim();
+    const result = document.getElementById("trackResult");
+    if (!q) { result.innerHTML = `<div class="warn-note">من فضلك اكتب رقم الطلب أو رقم الموبايل</div>`; return; }
+
+    const orders = KS.getOrders();
+    const order = orders.find(o => o.id.toLowerCase() === q.toLowerCase() || o.phone === q);
+
+    if (!order) {
+      result.innerHTML = `<div class="warn-note">
+        مش لاقيين طلب بالبيانات دي على المتصفح ده. لو طلبت من جهاز تاني، تقدر تتابع الطلب مباشرة عبر واتساب.
+        <br><br><a href="#" data-wa-link target="_blank" class="btn btn-dark" style="margin-top:8px">تواصل عبر واتساب</a>
+      </div>`;
+      fixWhatsappLinks(KS.getSettings().whatsapp);
+      return;
+    }
+
+    const sc = KS.statusColor(order.status);
+    const isCancelled = order.status === "ملغي";
+    const stepIndex = statusSteps.indexOf(order.status);
+    result.innerHTML = `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px">
+          <h3 style="margin:0">طلب ${order.id}</h3>
+          <span class="status-pill" style="background:${sc.bg};color:${sc.color}">${order.status}</span>
+        </div>
+        <p style="color:var(--ink-soft);margin:6px 0 20px">تاريخ الطلب: ${new Date(order.date).toLocaleDateString("ar-EG")}</p>
+        ${isCancelled ? `<div class="warn-note" style="margin-bottom:20px">تم إلغاء الطلب ده. لو عندك أي استفسار، تواصل معانا عبر واتساب.</div>` : `
+        <div style="display:flex;gap:8px;margin-bottom:24px">
+          ${statusSteps.map((s, i) => `
+            <div style="flex:1;text-align:center">
+              <div style="height:6px;border-radius:4px;background:${i <= stepIndex ? "var(--brass)" : "var(--line)"};margin-bottom:8px"></div>
+              <div style="font-size:12.5px;color:${i <= stepIndex ? "var(--ink)" : "var(--ink-soft)"}">${s}</div>
+            </div>
+          `).join("")}
+        </div>`}
+        <h4>محتويات الطلب</h4>
+        ${order.items.map(i => `
+          <div class="cart-item">
+            <img src="${i.image}" alt="${i.name}">
+            <div class="info">
+              <h5>${i.name} × ${i.qty}</h5>
+              <div class="meta">${[i.size, i.color].filter(Boolean).join(" · ") || i.category}</div>
+            </div>
+          </div>
+        `).join("")}
+        <div class="cart-total-row" style="margin-top:14px"><span>الإجمالي</span><span>${KS.fmt(order.total)}</span></div>
+      </div>
+    `;
+  }
+</script>
+</body>
+</html>
