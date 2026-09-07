@@ -15,14 +15,9 @@
 <section class="hero">
   <div class="hero-bg-layers" id="heroBgLayers"></div>
   <div class="wrap hero-inner">
-    <div>
-      <div class="hero-eyebrow">Koresh Store</div>
-      <h1>كل اللي محتاجه<br><span>في مكان واحد</span></h1>
-      <p>إلكترونيات، موبايلات، أزياء، ومنتجات منزلية — أقسام واضحة، أسعار مباشرة، وشحن لحد باب البيت في كل المحافظات.</p>
-      <div class="hero-cta">
-        <a href="#products" class="btn btn-primary">تسوّق دلوقتي</a>
-        <a href="#" target="_blank" rel="noopener" id="askProductLink" class="btn btn-outline">اسأل عن منتج</a>
-      </div>
+    <div class="hero-cta">
+      <a href="#products" class="btn btn-primary">تسوّق دلوقتي</a>
+      <a href="#" target="_blank" rel="noopener" id="askProductLink" class="btn btn-outline">اسأل عن منتج</a>
     </div>
   </div>
   <div class="hero-bg-dots" id="heroBgDots"></div>
@@ -80,9 +75,6 @@
   function updateHeroText() {
     const s = KS.getSettings();
     document.getElementById("askProductLink").href = `https://wa.me/${s.whatsapp}`;
-    document.querySelector(".hero-eyebrow").textContent = s.storeName;
-    document.querySelector(".hero h1").innerHTML = `${s.heroTitle}<br><span>${s.heroTitleAccent}</span>`;
-    document.querySelector(".hero p").textContent = s.heroSubtitle;
     document.getElementById("productsHeading").textContent = "كل منتجات " + s.storeName;
     renderHeroBackground();
   }

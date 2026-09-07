@@ -420,6 +420,7 @@ function videosTabHTML() {
     <div class="card" style="margin-bottom:20px">
       <h3 style="margin-top:0">رفع فيديو جديد</h3>
       <p class="form-note" style="margin-bottom:14px">اختار فيديو أو أكتر من جهاز الكمبيوتر مباشرة (مفيش أي روابط مطلوبة).</p>
+      <p class="form-note" style="margin-bottom:14px">⏳ وقت الرفع بيعتمد على حجم الفيديو وسرعة النت عندك — فيديو كبير (دقايق طويلة أو دقة عالية جدًا) ممكن ياخد وقت. لو عايز الرفع يبقى أسرع، قلّل حجم/دقة الفيديو قبل ما ترفعه.</p>
       <input type="file" id="videoUploadInput" accept="video/*" multiple>
       <div id="videoUploadProgress" style="margin-top:14px;display:flex;flex-direction:column;gap:8px"></div>
     </div>
@@ -450,20 +451,23 @@ function bindVideosEvents() {
     const progressBox = document.getElementById("videoUploadProgress");
     input.disabled = true;
 
-    await Promise.all(files.map((file) => {
+    // بيترفعوا واحد ورا التاني (مش كلهم مع بعض) عشان كل فيديو ياخد أقصى سرعة
+    // إنترنت متاحة، وعشان تشوف فيديو خلص وهو ظاهر من غير ما تستنى الكل يخلصوا
+    for (const file of files) {
       const row = document.createElement("div");
       row.textContent = `جاري رفع "${file.name}"... 0%`;
       progressBox.appendChild(row);
 
-      return KS.uploadVideoCloud(file, (pct) => {
-        row.textContent = `جاري رفع "${file.name}"... ${pct}%`;
-      }).then(() => {
+      try {
+        await KS.uploadVideoCloud(file, (pct) => {
+          row.textContent = `جاري رفع "${file.name}"... ${pct}%`;
+        });
         row.textContent = `تم رفع "${file.name}" ✅`;
-      }).catch((err) => {
+      } catch (err) {
         console.error(err);
         row.textContent = `حصل خطأ في رفع "${file.name}"`;
-      });
-    }));
+      }
+    }
 
     input.disabled = false;
     e.target.value = "";
@@ -527,25 +531,6 @@ function settingsTabHTML() {
             <input type="url" id="setInstagram" value="${s.instagram}">
           </div>
           <button class="btn btn-primary" type="submit">حفظ بيانات التواصل</button>
-        </form>
-      </div>
-
-      <div class="card">
-        <h3 style="margin-top:0">نص الواجهة الرئيسية</h3>
-        <form id="heroForm">
-          <div class="field" style="margin-bottom:14px">
-            <label>العنوان الرئيسي</label>
-            <input type="text" id="setHeroTitle" value="${s.heroTitle}">
-          </div>
-          <div class="field" style="margin-bottom:14px">
-            <label>العنوان الرئيسي (الجزء المميز بالذهبي)</label>
-            <input type="text" id="setHeroTitleAccent" value="${s.heroTitleAccent}">
-          </div>
-          <div class="field" style="margin-bottom:14px">
-            <label>الوصف تحت العنوان</label>
-            <textarea id="setHeroSubtitle">${s.heroSubtitle}</textarea>
-          </div>
-          <button class="btn btn-primary" type="submit">حفظ نص الواجهة</button>
         </form>
       </div>
 
@@ -667,21 +652,6 @@ function bindSettingsEvents() {
       s.instagram = document.getElementById("setInstagram").value;
       await KS.saveSettingsCloud(s);
       showToast("تم حفظ بيانات التواصل");
-    } catch (err) {
-      console.error(err);
-      showToast("حصل خطأ في الحفظ");
-    }
-  });
-
-  document.getElementById("heroForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    try {
-      const s = KS.getSettings();
-      s.heroTitle = document.getElementById("setHeroTitle").value;
-      s.heroTitleAccent = document.getElementById("setHeroTitleAccent").value;
-      s.heroSubtitle = document.getElementById("setHeroSubtitle").value;
-      await KS.saveSettingsCloud(s);
-      showToast("تم حفظ نص الواجهة الرئيسية");
     } catch (err) {
       console.error(err);
       showToast("حصل خطأ في الحفظ");
