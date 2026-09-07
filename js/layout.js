@@ -2,13 +2,38 @@
    Koresh Store — الهيدر والفوتر وسلة التسوق (مشتركين بين الصفحات)
    ============================================================ */
 
+function bootstrapPage(activePage) {
+  // أول رندر فوري بالإعدادات الافتراضية (عشان الصفحة متبقاش فاضية وهي مستنية Firebase)
+  renderLayout(activePage);
+  // لما إعدادات المتجر الحقيقية توصل من Firestore، أعد رسم الهيدر/الفوتر بيها
+  KS.initCloudSettings(() => {
+    renderLayout(activePage);
+    if (typeof onSettingsReady === "function") onSettingsReady();
+  });
+  // المنتجات بتتحدث لحظيًا لكل زوار الموقع
+  if (typeof renderProducts === "function") {
+    KS.initCloudProducts(() => renderProducts());
+  }
+}
+
+function applyTheme() {
+  const s = KS.getSettings();
+  const root = document.documentElement.style;
+  root.setProperty("--brass", s.accent);
+  root.setProperty("--brass-light", s.accentLight);
+  root.setProperty("--ink", s.dark);
+  root.setProperty("--sand", s.sand);
+  root.setProperty("--clay", s.clay);
+  document.title = document.title.replace(/Koresh Store/g, s.storeName);
+  const favicon = document.querySelector('link[rel="icon"]');
+  if (favicon && s.logo) favicon.href = s.logo;
+}
+
 function renderLayout(activePage) {
+  applyTheme();
+  const s = KS.getSettings();
   const header = document.getElementById("site-header");
   const footer = document.getElementById("site-footer");
-  const cfg = KS.getSettings();
-  const brandMark = cfg.logoUrl
-    ? `<img src="${cfg.logoUrl}" alt="${cfg.storeName}" class="brand-logo">`
-    : `<span class="mark">${(cfg.storeName || "K").trim().charAt(0).toUpperCase()}</span>`;
 
   const nav = [
     { href: "index.html", label: "الرئيسية", key: "home" },
@@ -20,18 +45,19 @@ function renderLayout(activePage) {
 
   if (header) {
     header.innerHTML = `
-      <div class="top-strip">${cfg.tagline}</div>
+      <div class="top-strip">${s.topStrip}</div>
       <div class="wrap header-inner">
         <a href="index.html" class="brand">
-          ${brandMark} ${cfg.storeName}
+          <img src="${s.logo}" alt="${s.storeName}" class="brand-logo">
+          ${s.storeName}
         </a>
         <nav class="main-nav" id="mainNav">
           ${nav.map(n => `<a class="nav-link${n.key === activePage ? " active" : ""}" href="${n.href}">${n.label}</a>`).join("")}
         </nav>
         <div class="header-actions">
           <div class="social-icons">
-            <a href="${cfg.facebook}" target="_blank" rel="noopener" aria-label="فيسبوك">${ICONS.facebook}</a>
-            <a href="${cfg.instagram}" target="_blank" rel="noopener" aria-label="انستجرام">${ICONS.instagram}</a>
+            <a href="${s.facebook}" target="_blank" rel="noopener" aria-label="فيسبوك">${ICONS.facebook}</a>
+            <a href="${s.instagram}" target="_blank" rel="noopener" aria-label="انستجرام">${ICONS.instagram}</a>
           </div>
           <button class="icon-btn" id="cartBtn" aria-label="السلة">
             ${ICONS.cart}
@@ -54,13 +80,14 @@ function renderLayout(activePage) {
       <div class="wrap footer-grid">
         <div class="footer-brand">
           <a href="index.html" class="brand" style="color:var(--sand)">
-            ${brandMark} ${cfg.storeName}
+            <img src="${s.logo}" alt="${s.storeName}" class="brand-logo">
+            ${s.storeName}
           </a>
           <p>متجر مصري بسيط وسريع بيجمع احتياجاتك اليومية في أقسام واضحة وأسعار مباشرة.</p>
           <div class="footer-social">
-            <a href="${cfg.facebook}" target="_blank" rel="noopener" aria-label="فيسبوك">${ICONS.facebook}</a>
-            <a href="${cfg.instagram}" target="_blank" rel="noopener" aria-label="انستجرام">${ICONS.instagram}</a>
-            <a href="https://wa.me/${cfg.whatsapp}" target="_blank" rel="noopener" aria-label="واتساب">${ICONS.whatsapp}</a>
+            <a href="${s.facebook}" target="_blank" rel="noopener" aria-label="فيسبوك">${ICONS.facebook}</a>
+            <a href="${s.instagram}" target="_blank" rel="noopener" aria-label="انستجرام">${ICONS.instagram}</a>
+            <a href="https://wa.me/${s.whatsapp}" target="_blank" rel="noopener" aria-label="واتساب">${ICONS.whatsapp}</a>
           </div>
         </div>
         <div>
@@ -75,21 +102,21 @@ function renderLayout(activePage) {
         <div>
           <h4>خدمة العملاء</h4>
           <ul>
-            <li><a href="https://wa.me/${cfg.whatsapp}" target="_blank" rel="noopener">واتساب: ${formatPhone(cfg.whatsapp)}</a></li>
-            <li><a href="tel:+${cfg.whatsapp}">اتصال مباشر</a></li>
+            <li><a href="https://wa.me/${s.whatsapp}" target="_blank" rel="noopener">واتساب: ${formatPhone(s.whatsapp)}</a></li>
+            <li><a href="tel:+${s.whatsapp}">اتصال مباشر</a></li>
           </ul>
         </div>
         <div>
           <h4>تابعنا</h4>
           <ul>
-            <li><a href="${cfg.facebook}" target="_blank" rel="noopener">فيسبوك</a></li>
-            <li><a href="${cfg.instagram}" target="_blank" rel="noopener">انستجرام</a></li>
+            <li><a href="${s.facebook}" target="_blank" rel="noopener">فيسبوك</a></li>
+            <li><a href="${s.instagram}" target="_blank" rel="noopener">انستجرام</a></li>
             <li><a href="admin.html">إدارة المتجر</a></li>
           </ul>
         </div>
       </div>
       <div class="wrap footer-bottom">
-        <span>© ${new Date().getFullYear()} ${cfg.storeName} — كل الحقوق محفوظة</span>
+        <span>© ${new Date().getFullYear()} ${s.storeName} — كل الحقوق محفوظة</span>
         <span>صُنع بعناية في مصر</span>
       </div>
     `;
@@ -97,28 +124,6 @@ function renderLayout(activePage) {
 
   injectCartDrawer();
   injectWhatsappFloat();
-  applyHeroBackground();
-  fixWhatsappLinks(cfg.whatsapp);
-}
-
-function applyHeroBackground() {
-  const heroEl = document.querySelector(".hero");
-  if (!heroEl) return;
-  const cfg = KS.getSettings();
-  if (cfg.heroBackgroundUrl) {
-    heroEl.style.backgroundImage = `linear-gradient(120deg, rgba(20,18,37,.88), rgba(20,18,37,.55)), url('${cfg.heroBackgroundUrl}')`;
-    heroEl.style.backgroundSize = "cover";
-    heroEl.style.backgroundPosition = "center";
-  } else {
-    heroEl.style.backgroundImage = "";
-  }
-}
-
-function fixWhatsappLinks(whatsapp) {
-  document.querySelectorAll("a[data-wa-link]").forEach(a => {
-    const text = a.getAttribute("data-wa-text") || "";
-    a.href = `https://wa.me/${whatsapp}${text ? "?text=" + encodeURIComponent(text) : ""}`;
-  });
 }
 
 function formatPhone(p) {
@@ -136,19 +141,17 @@ const ICONS = {
 };
 
 function injectWhatsappFloat() {
-  const cfg = KS.getSettings();
-  let a = document.getElementById("waFloat");
-  if (!a) {
-    a = document.createElement("a");
-    a.id = "waFloat";
-    a.className = "wa-float";
-    a.target = "_blank";
-    a.rel = "noopener";
-    a.setAttribute("aria-label", "تواصل عبر واتساب");
-    a.innerHTML = ICONS.whatsappBig;
-    document.body.appendChild(a);
-  }
-  a.href = `https://wa.me/${cfg.whatsapp}?text=${encodeURIComponent("مرحبًا، عندي استفسار بخصوص منتجات " + cfg.storeName)}`;
+  if (document.getElementById("waFloat")) return;
+  const s = KS.getSettings();
+  const a = document.createElement("a");
+  a.id = "waFloat";
+  a.className = "wa-float";
+  a.href = `https://wa.me/${s.whatsapp}?text=${encodeURIComponent("مرحبًا، عندي استفسار بخصوص منتجات " + s.storeName)}`;
+  a.target = "_blank";
+  a.rel = "noopener";
+  a.setAttribute("aria-label", "تواصل عبر واتساب");
+  a.innerHTML = ICONS.whatsappBig;
+  document.body.appendChild(a);
 }
 
 /* ---------------- Cart Drawer ---------------- */

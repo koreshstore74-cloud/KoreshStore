@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>تتبّع طلبك | Koresh Store</title>
 <link rel="stylesheet" href="css/style.css">
-<link rel="icon" href="data:,">
+<link rel="icon" href="assets/favicon.png">
 </head>
 <body>
 
@@ -14,7 +14,7 @@
 <section class="page-hero">
   <div class="wrap">
     <h1>تتبّع طلبك</h1>
-    <p>اكتب رقم الطلب أو رقم الموبايل اللي طلبت بيه عشان تعرف حالة الشحن</p>
+    <p>اكتب رقم الطلب اللي وصلك بعد إتمام الشراء عشان تعرف حالة الشحن</p>
   </div>
 </section>
 
@@ -23,14 +23,16 @@
     <div class="card">
       <div class="form-grid">
         <div class="field full">
-          <label>رقم الطلب أو رقم الموبايل</label>
-          <input type="text" id="trackInput" placeholder="مثال: KS-AB12C أو 01xxxxxxxxx">
+          <label>رقم الطلب</label>
+          <input type="text" id="trackInput" placeholder="مثال: KS-AB12C">
         </div>
       </div>
       <button class="btn btn-primary" style="margin-top:16px" onclick="trackOrder()">تتبّع الطلب</button>
     </div>
 
     <div id="trackResult" style="margin-top:24px"></div>
+
+    <div id="myOrdersBox" style="margin-top:28px"></div>
   </div>
 </section>
 
@@ -39,47 +41,61 @@
 <script src="js/data.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/layout.js"></script>
+<script type="module" src="js/firebase-init.js"></script>
 <script>
-  renderLayout("track");
+  bootstrapPage("track");
 
-  const statusSteps = ["قيد التجهيز", "تم الشحن", "في الطريق", "تم التوصيل"];
+  const statusSteps = ["قيد التجهيز", "جاهز للشحن", "تم الشحن", "في الطريق", "تم التوصيل"];
 
-  function trackOrder() {
-    const q = document.getElementById("trackInput").value.trim();
+  async function trackOrder() {
+    const q = document.getElementById("trackInput").value.trim().toUpperCase();
     const result = document.getElementById("trackResult");
-    if (!q) { result.innerHTML = `<div class="warn-note">من فضلك اكتب رقم الطلب أو رقم الموبايل</div>`; return; }
+    if (!q) { result.innerHTML = `<div class="warn-note">من فضلك اكتب رقم الطلب</div>`; return; }
 
-    const orders = KS.getOrders();
-    const order = orders.find(o => o.id.toLowerCase() === q.toLowerCase() || o.phone === q);
+    result.innerHTML = `<div class="form-note">جاري البحث...</div>`;
+    const order = await KS.getOrderById(q);
 
     if (!order) {
       result.innerHTML = `<div class="warn-note">
-        مش لاقيين طلب بالبيانات دي على المتصفح ده. لو طلبت من جهاز تاني، تقدر تتابع الطلب مباشرة عبر واتساب.
-        <br><br><a href="#" data-wa-link target="_blank" class="btn btn-dark" style="margin-top:8px">تواصل عبر واتساب</a>
+        مش لاقيين طلب بالرقم ده. تأكد إنك كتبته صح، أو تواصل معانا مباشرة عبر واتساب.
+        <br><br><a href="https://wa.me/${KS.getSettings().whatsapp}" target="_blank" class="btn btn-dark" style="margin-top:8px">تواصل عبر واتساب</a>
       </div>`;
-      fixWhatsappLinks(KS.getSettings().whatsapp);
       return;
     }
 
-    const sc = KS.statusColor(order.status);
-    const isCancelled = order.status === "ملغي";
+    renderOrderCard(result, order);
+  }
+
+  function renderOrderCard(container, order) {
+    if (order.status === "ملغي") {
+      container.innerHTML = `
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px">
+            <h3 style="margin:0">طلب ${order.id}</h3>
+            <span class="status-pill status-ملغي">ملغي</span>
+          </div>
+          <p style="color:var(--ink-soft);margin:6px 0 0">تم إلغاء الطلب ده. لو محتاج تفاصيل أكتر، تواصل معانا عبر واتساب.</p>
+        </div>
+      `;
+      return;
+    }
+
     const stepIndex = statusSteps.indexOf(order.status);
-    result.innerHTML = `
+    container.innerHTML = `
       <div class="card">
         <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px">
           <h3 style="margin:0">طلب ${order.id}</h3>
-          <span class="status-pill" style="background:${sc.bg};color:${sc.color}">${order.status}</span>
+          <span class="status-pill status-قيد-المعالجة">${order.status}</span>
         </div>
         <p style="color:var(--ink-soft);margin:6px 0 20px">تاريخ الطلب: ${new Date(order.date).toLocaleDateString("ar-EG")}</p>
-        ${isCancelled ? `<div class="warn-note" style="margin-bottom:20px">تم إلغاء الطلب ده. لو عندك أي استفسار، تواصل معانا عبر واتساب.</div>` : `
         <div style="display:flex;gap:8px;margin-bottom:24px">
           ${statusSteps.map((s, i) => `
             <div style="flex:1;text-align:center">
               <div style="height:6px;border-radius:4px;background:${i <= stepIndex ? "var(--brass)" : "var(--line)"};margin-bottom:8px"></div>
-              <div style="font-size:12.5px;color:${i <= stepIndex ? "var(--ink)" : "var(--ink-soft)"}">${s}</div>
+              <div style="font-size:11.5px;color:${i <= stepIndex ? "var(--ink)" : "var(--ink-soft)"}">${s}</div>
             </div>
           `).join("")}
-        </div>`}
+        </div>
         <h4>محتويات الطلب</h4>
         ${order.items.map(i => `
           <div class="cart-item">
@@ -94,6 +110,24 @@
       </div>
     `;
   }
+
+  // طلبات إتعملت من الجهاز/المتصفح ده — تسهيل سريع من غير ما تكتب الرقم
+  async function renderMyOrders() {
+    const ids = KS.getLocalIds(KS.KEYS.myOrders);
+    const box = document.getElementById("myOrdersBox");
+    if (ids.length === 0) return;
+    box.innerHTML = `<h4 style="margin-bottom:10px">طلباتك من الجهاز ده</h4><div id="myOrdersList" class="form-note">جاري التحميل...</div>`;
+    const list = document.getElementById("myOrdersList");
+    const orders = (await Promise.all(ids.map(id => KS.getOrderById(id)))).filter(Boolean);
+    if (orders.length === 0) { box.innerHTML = ""; return; }
+    list.outerHTML = orders.map(o => `
+      <div class="complaint-row" style="cursor:pointer" onclick="document.getElementById('trackInput').value='${o.id}';trackOrder();window.scrollTo({top:0,behavior:'smooth'})">
+        <div><strong>${o.id}</strong> — ${new Date(o.date).toLocaleDateString("ar-EG")}</div>
+        <span class="status-pill ${o.status === "ملغي" ? "status-ملغي" : "status-قيد-المعالجة"}">${o.status}</span>
+      </div>
+    `).join("");
+  }
+  renderMyOrders();
 </script>
 </body>
 </html>

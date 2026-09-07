@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>إتمام الطلب | Koresh Store</title>
 <link rel="stylesheet" href="css/style.css">
-<link rel="icon" href="data:,">
+<link rel="icon" href="assets/favicon.png">
 </head>
 <body>
 
@@ -59,8 +59,9 @@
 <script src="js/data.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/layout.js"></script>
+<script type="module" src="js/firebase-init.js"></script>
 <script>
-  renderLayout(null);
+  bootstrapPage(null);
 
   function renderSummary() {
     const cart = KS.getCart();
@@ -84,10 +85,15 @@
   }
   renderSummary();
 
-  document.getElementById("checkoutForm").addEventListener("submit", (e) => {
+  document.getElementById("checkoutForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const cart = KS.getCart();
     if (cart.length === 0) return;
+
+    const submitBtn = e.target.querySelector("button[type=submit]");
+    submitBtn.disabled = true;
+    submitBtn.textContent = "جاري إرسال الطلب...";
+
     const order = {
       id: "KS-" + KS.uid().toUpperCase(),
       date: new Date().toISOString(),
@@ -100,20 +106,28 @@
       total: KS.cartTotal(),
       status: "قيد التجهيز"
     };
-    KS.addOrder(order);
-    KS.clearCart();
-    updateCartCount();
 
-    document.getElementById("checkoutLayout").style.display = "none";
-    const box = document.getElementById("orderSuccess");
-    box.style.display = "block";
-    box.innerHTML = `
-      تم استلام طلبك بنجاح 🎉<br>
-      رقم الطلب: <strong>${order.id}</strong><br>
-      احتفظ بالرقم ده عشان تقدر تتابع حالة طلبك من صفحة "تتبّع طلبك".<br><br>
-      <a href="track-order.html" class="btn btn-dark">تتبّع الطلب الآن</a>
-      <a href="index.html" class="btn btn-ghost">الرجوع للمتجر</a>
-    `;
+    try {
+      await KS.createOrderCloud(order);
+      KS.clearCart();
+      updateCartCount();
+
+      document.getElementById("checkoutLayout").style.display = "none";
+      const box = document.getElementById("orderSuccess");
+      box.style.display = "block";
+      box.innerHTML = `
+        تم استلام طلبك بنجاح 🎉<br>
+        رقم الطلب: <strong>${order.id}</strong><br>
+        احتفظ بالرقم ده عشان تقدر تتابع حالة طلبك من صفحة "تتبّع طلبك".<br><br>
+        <a href="track-order.html" class="btn btn-dark">تتبّع الطلب الآن</a>
+        <a href="index.html" class="btn btn-ghost">الرجوع للمتجر</a>
+      `;
+    } catch (err) {
+      console.error(err);
+      submitBtn.disabled = false;
+      submitBtn.textContent = "تأكيد الطلب";
+      showToast("حصل خطأ في إرسال الطلب، حاول تاني");
+    }
   });
 </script>
 </body>

@@ -6,7 +6,7 @@
 <title>إدارة المتجر | Koresh Store</title>
 <meta name="robots" content="noindex, nofollow">
 <link rel="stylesheet" href="css/style.css">
-<link rel="icon" href="data:,">
+<link rel="icon" href="assets/favicon.png">
 </head>
 <body>
 
@@ -15,19 +15,23 @@
 <!-- شاشة تسجيل الدخول -->
 <div class="login-shell" id="loginScreen">
   <div class="card login-card">
-    <div class="mark" id="loginMark" style="border-radius:50%;background:linear-gradient(135deg,var(--brass-light),var(--clay));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:20px;overflow:hidden">K</div>
-    <h2 style="text-align:center;margin-bottom:4px" id="loginTitle">لوحة تحكم Koresh Store</h2>
+    <img src="assets/logo.png" alt="Koresh Store" style="width:64px;height:64px;object-fit:contain;margin:0 auto 18px;display:block">
+    <h2 style="text-align:center;margin-bottom:4px" id="loginStoreName">لوحة تحكم Koresh Store</h2>
     <p class="form-note" style="text-align:center;margin-bottom:22px">الدخول لأصحاب المتجر فقط</p>
-    <form id="loginForm" onsubmit="handleLogin(event)">
+    <form id="loginForm">
+      <div class="field" style="margin-bottom:14px">
+        <label>الإيميل</label>
+        <input type="email" id="loginEmail" required autofocus>
+      </div>
       <div class="field" style="margin-bottom:14px">
         <label>كلمة السر</label>
-        <input type="password" id="loginPass" required autofocus>
+        <input type="password" id="loginPass" required>
       </div>
-      <div class="warn-note" id="loginError" style="display:none">كلمة السر غلط، حاول تاني</div>
-      <button class="btn btn-primary" style="width:100%;margin-top:6px" type="submit">دخول</button>
+      <div class="warn-note" id="loginError" style="display:none">بيانات الدخول غلط، حاول تاني</div>
+      <button class="btn btn-primary" style="width:100%;margin-top:6px" type="submit" id="loginBtn">دخول</button>
     </form>
     <p class="form-note" style="margin-top:18px;text-align:center">
-      كلمة السر الافتراضية أول مرة: <strong>koresh2026</strong><br>غيّرها فورًا من تبويب "الإعدادات" بعد الدخول.
+      الدخول بنفس الإيميل وكلمة السر اللي عملتهم في Firebase Authentication.
     </p>
   </div>
 </div>
@@ -46,8 +50,13 @@
 
   <section class="page-content">
     <div class="wrap">
+      <div class="warn-note">
+        ✅ الموقع دلوقتي متوصّل بقاعدة بيانات حقيقية (Firebase). أي منتج تضيفه، أو تغيير في الإعدادات، أو رد على شكوى —
+        بيظهر فورًا لكل زوار الموقع من أي جهاز. الطلبات والشكاوى اللي بيبعتها العملاء بتوصلك هنا مباشرة.
+      </div>
       <div class="admin-tabs">
-        <button class="admin-tab active" data-tab="products" onclick="switchTab('products')">المنتجات</button>
+        <button class="admin-tab active" data-tab="overview" onclick="switchTab('overview')">نظرة عامة</button>
+        <button class="admin-tab" data-tab="products" onclick="switchTab('products')">المنتجات</button>
         <button class="admin-tab" data-tab="orders" onclick="switchTab('orders')">الطلبات</button>
         <button class="admin-tab" data-tab="complaints" onclick="switchTab('complaints')">الشكاوى والاقتراحات</button>
         <button class="admin-tab" data-tab="settings" onclick="switchTab('settings')">الإعدادات</button>
@@ -67,47 +76,14 @@
 <script src="js/storage.js"></script>
 <script src="js/layout.js"></script>
 <script src="js/admin.js"></script>
+<script type="module" src="js/firebase-init.js"></script>
 <script>
-  renderLayout(null);
-  applyLoginBranding();
-  checkAuth();
+  bootstrapPage(null);
+  initAdminAuth();
+  document.getElementById("loginForm").addEventListener("submit", handleLogin);
   document.getElementById("modalOverlay").addEventListener("click", (e) => {
     if (e.target.id === "modalOverlay") closeModal();
   });
-</script>
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-  import {
-    getFirestore, collection, doc, getDocs, setDoc, deleteDoc, updateDoc, onSnapshot
-  } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
-  import {
-    getAuth, signInWithEmailAndPassword, signOut, updatePassword
-  } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyD3B0yXZwsukysrQhkl5iE_nAQTxU9c2L4",
-    authDomain: "koreshstore-b9206.firebaseapp.com",
-    projectId: "koreshstore-b9206",
-    storageBucket: "koreshstore-b9206.firebasestorage.app",
-    messagingSenderId: "721207539002",
-    appId: "1:721207539002:web:3335a2ccdbe87708524c03"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const auth = getAuth(app);
-
-  window.firebaseDB = db;
-  window.firestoreAPI = { db, collection, doc, getDocs, setDoc, deleteDoc, updateDoc, onSnapshot };
-  window.firebaseAuth = { auth, signInWithEmailAndPassword, signOut, updatePassword };
-
-  if (window.KS && typeof KS.initCloudProducts === "function") {
-    KS.initCloudProducts(() => {
-      if (typeof currentTab !== "undefined" && currentTab === "products" && typeof renderTab === "function") {
-        renderTab();
-      }
-    });
-  }
 </script>
 </body>
 </html>

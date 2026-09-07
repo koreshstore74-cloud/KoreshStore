@@ -6,7 +6,7 @@
 <title>Koresh Store | كل اللي محتاجه في مكان واحد</title>
 <meta name="description" content="متجر Koresh Store — إلكترونيات، موبايلات، أزياء، ومنتجات منزلية بأسعار مباشرة وشحن سريع لكل المحافظات.">
 <link rel="stylesheet" href="css/style.css">
-<link rel="icon" href="data:,">
+<link rel="icon" href="assets/favicon.png">
 </head>
 <body>
 
@@ -20,7 +20,7 @@
       <p>إلكترونيات، موبايلات، أزياء، ومنتجات منزلية — أقسام واضحة، أسعار مباشرة، وشحن لحد باب البيت في كل المحافظات.</p>
       <div class="hero-cta">
         <a href="#products" class="btn btn-primary">تسوّق دلوقتي</a>
-        <a href="#" data-wa-link data-wa-text="مرحبًا، عندي سؤال عن منتج" target="_blank" rel="noopener" class="btn btn-outline">اسأل عن منتج</a>
+        <a href="#" target="_blank" rel="noopener" id="askProductLink" class="btn btn-outline">اسأل عن منتج</a>
       </div>
     </div>
     <div class="hero-3d" id="hero3d"></div>
@@ -48,7 +48,7 @@
   <div class="wrap">
     <div class="section-head">
       <div>
-        <h2>كل منتجات Koresh Store</h2>
+        <h2 id="productsHeading">كل منتجات Koresh Store</h2>
         <p id="productCount">— منتج متاح</p>
       </div>
       <select id="sortSelect" class="field" style="padding:10px 14px;border-radius:10px;border:1px solid var(--line)">
@@ -76,41 +76,24 @@
 <script src="js/layout.js"></script>
 <script src="js/hero3d.js"></script>
 <script src="js/store.js"></script>
+<script type="module" src="js/firebase-init.js"></script>
 <script>
-  renderLayout("home");
+  function updateHeroText() {
+    const s = KS.getSettings();
+    document.getElementById("askProductLink").href = `https://wa.me/${s.whatsapp}`;
+    document.querySelector(".hero-eyebrow").textContent = s.storeName;
+    document.querySelector(".hero h1").innerHTML = `${s.heroTitle}<br><span>${s.heroTitleAccent}</span>`;
+    document.querySelector(".hero p").textContent = s.heroSubtitle;
+    document.getElementById("productsHeading").textContent = "كل منتجات " + s.storeName;
+  }
+  function onSettingsReady() { updateHeroText(); }
+
+  bootstrapPage("home");
+  updateHeroText();
   initHero3D("hero3d");
   document.getElementById("variantOverlay").addEventListener("click", (e) => {
     if (e.target.id === "variantOverlay") closeVariantModal();
   });
-</script>
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-  import {
-    getFirestore, collection, doc, getDocs, setDoc, deleteDoc, updateDoc, onSnapshot
-  } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyD3B0yXZwsukysrQhkl5iE_nAQTxU9c2L4",
-    authDomain: "koreshstore-b9206.firebaseapp.com",
-    projectId: "koreshstore-b9206",
-    storageBucket: "koreshstore-b9206.firebasestorage.app",
-    messagingSenderId: "721207539002",
-    appId: "1:721207539002:web:3335a2ccdbe87708524c03"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-
-  window.firebaseDB = db;
-  window.firestoreAPI = { db, collection, doc, getDocs, setDoc, deleteDoc, updateDoc, onSnapshot };
-
-  // منتجات المتجر بقت متزامنة مع Firebase — أي تغيير من لوحة التحكم
-  // هيظهر تلقائيًا لكل زائر فاتح الموقع، من غير ما يعمل تحديث للصفحة حتى
-  if (window.KS && typeof KS.initCloudProducts === "function") {
-    KS.initCloudProducts(() => {
-      if (typeof renderProducts === "function") renderProducts();
-    });
-  }
 </script>
 </body>
 </html>

@@ -1,0 +1,41 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // المنتجات وإعدادات المتجر: أي زائر يقدر يقرأها، بس التعديل
+    // مقصور على إيميل صاحب المتجر فقط (سجّله في Firebase Authentication)
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && request.auth.token.email == "OWNER_EMAIL_HERE";
+    }
+
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && request.auth.token.email == "OWNER_EMAIL_HERE";
+    }
+
+    // الطلبات: أي حد يقدر "يعمل طلب" (create)، وأي حد يقدر يجيب طلب
+    // واحد لو معاه رقمه بالظبط (get) عشان يتابعه — بس محدش يقدر يجيب
+    // *كل* الطلبات (list) إلا صاحب المتجر بس
+    match /orders/{orderId} {
+      allow get: if true;
+      allow list: if request.auth != null
+                  && request.auth.token.email == "OWNER_EMAIL_HERE";
+      allow create: if true;
+      allow update, delete: if request.auth != null
+                             && request.auth.token.email == "OWNER_EMAIL_HERE";
+    }
+
+    // الشكاوى: نفس منطق الطلبات بالظبط
+    match /complaints/{complaintId} {
+      allow get: if true;
+      allow list: if request.auth != null
+                  && request.auth.token.email == "OWNER_EMAIL_HERE";
+      allow create: if true;
+      allow update, delete: if request.auth != null
+                             && request.auth.token.email == "OWNER_EMAIL_HERE";
+    }
+  }
+}
