@@ -7,6 +7,57 @@
 
 let currentTab = "overview";
 let cloudListenersStarted = false;
+let currentProductImage = null; // الصورة اللي هتتخزن مع المنتج بعد الرفع من الجهاز
+
+/* ================= رفع وضغط الصور من الجهاز ================= */
+// بتاخد ملف من input[type=file] وترجع Data URL مضغوط وبمقاس مناسب،
+// عشان الصور المرفوعة من الجهاز متبقاش تقيلة على قاعدة البيانات (Firestore).
+function compressImageToDataURL(file, opts = {}) {
+  const {
+    maxDim = 1200,
+    quality = 0.82,
+    mime = "image/jpeg",
+    fillWhite = true,
+    targetBytes = 700 * 1024
+  } = opts;
+
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+      const width = Math.max(1, Math.round(img.width * scale));
+      const height = Math.max(1, Math.round(img.height * scale));
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+
+      if (mime === "image/jpeg" && fillWhite) {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, width, height);
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+
+      if (mime === "image/png") {
+        resolve(canvas.toDataURL("image/png"));
+        return;
+      }
+
+      let q = quality;
+      let dataUrl = canvas.toDataURL(mime, q);
+      while (dataUrl.length * 0.75 > targetBytes && q > 0.4) {
+        q -= 0.1;
+        dataUrl = canvas.toDataURL(mime, q);
+      }
+      resolve(dataUrl);
+    };
+    img.onerror = () => reject(new Error("تعذّر قراءة الصورة"));
+    img.src = objectUrl;
+  });
+}
 
 /* ================= المصادقة ================= */
 function initAdminAuth() {
@@ -150,6 +201,8 @@ function openProductModal(id) {
   const p = id ? products.find(x => x.id === id) : null;
   const overlay = document.getElementById("modalOverlay");
   const modal = document.getElementById("modalBody");
+  currentProductImage = p?.image || null;
+
   modal.innerHTML = `
     <h3>${p ? "تعديل منتج" : "إضافة منتج جديد"}</h3>
     <form id="productForm">
@@ -163,7 +216,14 @@ function openProductModal(id) {
         <div class="field"><label>الكمية المتاحة</label><input type="number" id="pStock" min="0" value="${p?.stock ?? 10}"></div>
         <div class="field"><label>السعر (ج.م)</label><input type="number" id="pPrice" required min="0" value="${p?.price ?? ""}"></div>
         <div class="field"><label>السعر قبل الخصم (اختياري)</label><input type="number" id="pOldPrice" min="0" value="${p?.oldPrice ?? ""}"></div>
-        <div class="field full"><label>رابط الصورة</label><input type="url" id="pImage" required value="${p?.image || ""}" placeholder="https://..."></div>
+        <div class="field full">
+          <label>صورة المنتج</label>
+          <div class="image-upload-field">
+            <img id="pImagePreview" src="${p?.image || ""}" style="${p?.image ? "" : "display:none;"}">
+            <input type="file" id="pImageFile" accept="image/*" style="flex:1">
+          </div>
+          <span class="form-note">ارفع صورة من جهازك مباشرة (يفضّل صورة مربعة الشكل).</span>
+        </div>
         <div class="field"><label>وسم مميز (اختياري)</label><input type="text" id="pBadge" value="${p?.badge || ""}" placeholder="مثال: جديد"></div>
         <div class="field"><label>المقاسات (افصل بفاصلة)</label><input type="text" id="pSizes" value="${p?.variants?.sizes?.join(", ") || ""}" placeholder="S, M, L, XL"></div>
         <div class="field full"><label>الألوان (افصل بفاصلة)</label><input type="text" id="pColors" value="${p?.variants?.colors?.join(", ") || ""}" placeholder="أسود, أبيض"></div>
@@ -176,8 +236,27 @@ function openProductModal(id) {
   `;
   overlay.classList.add("open");
 
+  document.getElementById("pImageFile").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const dataUrl = await compressImageToDataURL(file, { maxDim: 1000, quality: 0.82, mime: "image/jpeg", targetBytes: 450 * 1024 });
+      currentProductImage = dataUrl;
+      const preview = document.getElementById("pImagePreview");
+      preview.src = dataUrl;
+      preview.style.display = "block";
+    } catch (err) {
+      console.error(err);
+      showToast("حصل خطأ في قراءة الصورة");
+    }
+  });
+
   document.getElementById("productForm").addEventListener("submit", (e) => {
     e.preventDefault();
+    if (!currentProductImage) {
+      showToast("لازم ترفع صورة للمنتج الأول");
+      return;
+    }
     saveProduct(id);
   });
 }
@@ -197,7 +276,7 @@ async function saveProduct(id) {
     category: document.getElementById("pCategory").value,
     price: Number(document.getElementById("pPrice").value),
     oldPrice: document.getElementById("pOldPrice").value ? Number(document.getElementById("pOldPrice").value) : null,
-    image: document.getElementById("pImage").value,
+    image: currentProductImage,
     badge: document.getElementById("pBadge").value || null,
     stock: Number(document.getElementById("pStock").value),
     variants
@@ -386,6 +465,15 @@ function settingsTabHTML() {
       </div>
 
       <div class="card">
+        <h3 style="margin-top:0">صور خلفية الشاشة الرئيسية</h3>
+        <p class="form-note" style="margin-bottom:14px">ارفع صورة أو أكتر من جهازك مباشرة، وهتظهر بالتبادل (تلاشي ناعم) في خلفية الشاشة الرئيسية لكل زوار الموقع. الترتيب اللي هنا هو ترتيب الظهور — حد أقصى 6 صور.</p>
+        <div id="heroImageManager"></div>
+        <div style="margin-top:14px">
+          <input type="file" id="heroImageUpload" accept="image/*" multiple>
+        </div>
+      </div>
+
+      <div class="card">
         <h3 style="margin-top:0">ألوان الموقع</h3>
         <p class="form-note" style="margin-bottom:16px">غيّر ألوان الموقع زي ما تحب — التغيير بيظهر فورًا لكل زوار الموقع</p>
         <form id="themeForm">
@@ -424,27 +512,51 @@ function settingsTabHTML() {
 }
 
 function bindSettingsEvents() {
-  document.getElementById("logoUpload").addEventListener("change", (e) => {
+  renderHeroImageManager();
+
+  document.getElementById("logoUpload").addEventListener("change", async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 900 * 1024) {
-      showToast("الصورة كبيرة أوي، اختار صورة أصغر من 900KB");
+    try {
+      const dataUrl = await compressImageToDataURL(file, { maxDim: 260, mime: "image/png" });
+      document.getElementById("logoPreview").src = dataUrl;
+      const s = KS.getSettings();
+      s.logo = dataUrl;
+      await KS.saveSettingsCloud(s);
+      showToast("تم تحديث اللوجو لكل زوار الموقع");
+    } catch (err) {
+      console.error(err);
+      showToast("حصل خطأ في رفع اللوجو");
+    }
+    e.target.value = "";
+  });
+
+  document.getElementById("heroImageUpload").addEventListener("change", async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    const s = KS.getSettings();
+    const images = [...(s.heroImages || [])];
+    if (images.length >= 6) {
+      showToast("وصلت للحد الأقصى (6 صور) — احذف صورة الأول عشان تضيف غيرها");
+      e.target.value = "";
       return;
     }
-    const reader = new FileReader();
-    reader.onload = async () => {
-      document.getElementById("logoPreview").src = reader.result;
-      try {
-        const s = KS.getSettings();
-        s.logo = reader.result;
-        await KS.saveSettingsCloud(s);
-        showToast("تم تحديث اللوجو لكل زوار الموقع");
-      } catch (err) {
-        console.error(err);
-        showToast("حصل خطأ في رفع اللوجو");
+    const room = 6 - images.length;
+    const toAdd = files.slice(0, room);
+    try {
+      for (const file of toAdd) {
+        const dataUrl = await compressImageToDataURL(file, { maxDim: 1600, quality: 0.75, mime: "image/jpeg", targetBytes: 260 * 1024 });
+        images.push(dataUrl);
       }
-    };
-    reader.readAsDataURL(file);
+      s.heroImages = images;
+      await KS.saveSettingsCloud(s);
+      renderHeroImageManager();
+      showToast(toAdd.length > 1 ? "تم إضافة الصور لخلفية الشاشة الرئيسية" : "تم إضافة الصورة لخلفية الشاشة الرئيسية");
+    } catch (err) {
+      console.error(err);
+      showToast("حصل خطأ في رفع الصورة");
+    }
+    e.target.value = "";
   });
 
   document.getElementById("identityForm").addEventListener("submit", async (e) => {
@@ -507,6 +619,62 @@ function bindSettingsEvents() {
       showToast("حصل خطأ في الحفظ");
     }
   });
+}
+
+/* ================= صور خلفية الشاشة الرئيسية ================= */
+function renderHeroImageManager() {
+  const container = document.getElementById("heroImageManager");
+  if (!container) return;
+  const images = KS.getSettings().heroImages || [];
+  if (images.length === 0) {
+    container.innerHTML = `<div class="empty-state" style="padding:18px 10px">لسه مفيش صور خلفية متضافة — الشاشة الرئيسية هتفضل باللون الافتراضي لحد ما تضيف صورة</div>`;
+    return;
+  }
+  container.innerHTML = `
+    <div class="hero-thumb-row">
+      ${images.map((src, i) => `
+        <div class="hero-thumb">
+          <img src="${src}" alt="صورة خلفية ${i + 1}">
+          <div class="hero-thumb-actions">
+            <button type="button" onclick="moveHeroImage(${i}, -1)" ${i === 0 ? "disabled" : ""} title="قدّمها في الترتيب">↑</button>
+            <button type="button" onclick="moveHeroImage(${i}, 1)" ${i === images.length - 1 ? "disabled" : ""} title="أخّرها في الترتيب">↓</button>
+            <button type="button" class="danger" onclick="removeHeroImage(${i})" title="احذف الصورة">✕</button>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+async function moveHeroImage(index, dir) {
+  const s = KS.getSettings();
+  const images = [...(s.heroImages || [])];
+  const target = index + dir;
+  if (target < 0 || target >= images.length) return;
+  [images[index], images[target]] = [images[target], images[index]];
+  s.heroImages = images;
+  try {
+    await KS.saveSettingsCloud(s);
+    renderHeroImageManager();
+  } catch (err) {
+    console.error(err);
+    showToast("حصل خطأ في تغيير الترتيب");
+  }
+}
+
+async function removeHeroImage(index) {
+  const s = KS.getSettings();
+  const images = [...(s.heroImages || [])];
+  images.splice(index, 1);
+  s.heroImages = images;
+  try {
+    await KS.saveSettingsCloud(s);
+    renderHeroImageManager();
+    showToast("اتشالت الصورة");
+  } catch (err) {
+    console.error(err);
+    showToast("حصل خطأ في الحذف");
+  }
 }
 
 async function resetTheme() {

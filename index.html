@@ -13,6 +13,7 @@
 <div id="site-header"></div>
 
 <section class="hero">
+  <div class="hero-bg-layers" id="heroBgLayers"></div>
   <div class="wrap hero-inner">
     <div>
       <div class="hero-eyebrow">Koresh Store</div>
@@ -25,6 +26,7 @@
     </div>
     <div class="hero-3d" id="hero3d"></div>
   </div>
+  <div class="hero-bg-dots" id="heroBgDots"></div>
 </section>
 
 <section class="trust-strip">
@@ -85,11 +87,48 @@
     document.querySelector(".hero h1").innerHTML = `${s.heroTitle}<br><span>${s.heroTitleAccent}</span>`;
     document.querySelector(".hero p").textContent = s.heroSubtitle;
     document.getElementById("productsHeading").textContent = "كل منتجات " + s.storeName;
+    renderHeroBackground();
   }
-  function onSettingsReady() { updateHeroText(); }
+  function onSettingsReady() { updateHeroText(); resetHeroBgTimer(); }
+
+  /* صور خلفية الشاشة الرئيسية — بتتراكب فوق بعض وتتبادل تلقائيًا،
+     ومتضافة من لوحة التحكم (admin.html) عبر رفع مباشر من الجهاز */
+  let heroBgIndex = 0;
+  let heroBgTimer = null;
+  function renderHeroBackground() {
+    const layers = document.getElementById("heroBgLayers");
+    const dots = document.getElementById("heroBgDots");
+    const images = KS.getSettings().heroImages || [];
+    if (heroBgIndex >= images.length) heroBgIndex = 0;
+    layers.innerHTML = "";
+    dots.innerHTML = "";
+    images.forEach((src, i) => {
+      const layer = document.createElement("div");
+      layer.className = "hero-bg-layer" + (i === heroBgIndex ? " active" : "");
+      layer.style.backgroundImage = `url(${src})`;
+      layers.appendChild(layer);
+
+      const dot = document.createElement("button");
+      dot.className = i === heroBgIndex ? "active" : "";
+      dot.setAttribute("aria-label", "صورة الخلفية " + (i + 1));
+      dot.addEventListener("click", () => { heroBgIndex = i; renderHeroBackground(); resetHeroBgTimer(); });
+      dots.appendChild(dot);
+    });
+  }
+  function resetHeroBgTimer() {
+    clearInterval(heroBgTimer);
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    heroBgTimer = setInterval(() => {
+      const images = KS.getSettings().heroImages || [];
+      if (images.length < 2) return;
+      heroBgIndex = (heroBgIndex + 1) % images.length;
+      renderHeroBackground();
+    }, 5500);
+  }
 
   bootstrapPage("home");
   updateHeroText();
+  resetHeroBgTimer();
   initHero3D("hero3d");
   document.getElementById("variantOverlay").addEventListener("click", (e) => {
     if (e.target.id === "variantOverlay") closeVariantModal();

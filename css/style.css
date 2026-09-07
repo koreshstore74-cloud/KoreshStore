@@ -110,8 +110,28 @@ nav.main-nav{display:flex;gap:26px;flex:1;justify-content:center;flex-wrap:wrap;
   color:var(--sand);
   overflow:hidden;
   position:relative;
+  isolation:isolate;
 }
+.hero-bg-layers{position:absolute;inset:0;z-index:0;}
+.hero-bg-layer{
+  position:absolute;inset:0;
+  background-size:cover;background-position:center;
+  opacity:0;transition:opacity 1.8s ease;
+}
+.hero-bg-layer.active{opacity:1;}
+.hero::before{
+  content:'';position:absolute;inset:0;z-index:1;
+  background:linear-gradient(100deg, rgba(20,18,37,.94) 0%, rgba(20,18,37,.78) 42%, rgba(20,18,37,.5) 100%);
+  pointer-events:none;
+}
+.hero-bg-dots{
+  position:absolute;bottom:16px;right:50%;transform:translateX(50%);
+  z-index:2;display:flex;gap:7px;
+}
+.hero-bg-dots button{width:7px;height:7px;border-radius:50%;border:none;padding:0;background:rgba(244,237,225,.4);}
+.hero-bg-dots button.active{background:var(--brass-light);width:20px;border-radius:4px;}
 .hero-inner{
+  position:relative;z-index:2;
   display:grid;grid-template-columns:1.1fr .9fr;gap:40px;
   align-items:center;padding:64px 0 48px;
 }
@@ -314,6 +334,28 @@ footer a:hover{color:var(--brass-light);}
 .color-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .color-grid input[type="color"]{height:44px;padding:4px;cursor:pointer;}
 @media (max-width:520px){.color-grid{grid-template-columns:1fr;}}
+
+/* ---------- Hero images manager (admin) ---------- */
+.hero-thumb-row{display:flex;gap:12px;flex-wrap:wrap;}
+.hero-thumb{
+  position:relative;width:110px;height:74px;border-radius:10px;overflow:hidden;
+  border:1px solid var(--line);background:var(--sand-2);
+}
+.hero-thumb img{width:100%;height:100%;object-fit:cover;}
+.hero-thumb-actions{
+  position:absolute;inset:0;background:rgba(20,18,37,.55);
+  display:flex;align-items:center;justify-content:center;gap:5px;
+  opacity:0;transition:opacity .15s ease;
+}
+.hero-thumb:hover .hero-thumb-actions{opacity:1;}
+.hero-thumb-actions button{
+  width:24px;height:24px;border-radius:6px;border:none;background:#fff;
+  font-size:13px;display:flex;align-items:center;justify-content:center;color:var(--ink);
+}
+.hero-thumb-actions button.danger{background:#b3413a;color:#fff;}
+.hero-thumb-actions button:disabled{opacity:.35;}
+.image-upload-field{display:flex;align-items:center;gap:14px;}
+.image-upload-field img{width:64px;height:64px;object-fit:cover;border:1px solid var(--line);border-radius:10px;background:#fff;}
 
 /* ---------- Admin ---------- */
 .login-shell{min-height:70vh;display:flex;align-items:center;justify-content:center;padding:40px 20px;}
