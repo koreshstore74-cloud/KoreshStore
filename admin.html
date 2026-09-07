@@ -80,6 +80,9 @@
   import {
     getFirestore, collection, doc, getDocs, setDoc, deleteDoc, updateDoc, onSnapshot
   } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+  import {
+    getAuth, signInWithEmailAndPassword, signOut, updatePassword
+  } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyD3B0yXZwsukysrQhkl5iE_nAQTxU9c2L4",
@@ -92,11 +95,12 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
+  const auth = getAuth(app);
 
   window.firebaseDB = db;
   window.firestoreAPI = { db, collection, doc, getDocs, setDoc, deleteDoc, updateDoc, onSnapshot };
+  window.firebaseAuth = { auth, signInWithEmailAndPassword, signOut, updatePassword };
 
-  // لو حد تاني عدّل منتجات من جهاز/متصفح تاني، تبويب المنتجات هنا يتحدث تلقائيًا
   if (window.KS && typeof KS.initCloudProducts === "function") {
     KS.initCloudProducts(() => {
       if (typeof currentTab !== "undefined" && currentTab === "products" && typeof renderTab === "function") {

@@ -3,6 +3,7 @@
    ============================================================ */
 
 let currentTab = "products";
+const FIREBASE_ADMIN_EMAIL = "admin@koreshstore.com";
 
 function applyLoginBranding() {
   const cfg = KS.getSettings();
@@ -30,7 +31,7 @@ function checkAuth() {
   }
 }
 
-function handleLogin(e) {
+async function handleLogin(e) {
   e.preventDefault();
   const pass = document.getElementById("loginPass").value;
   const errorEl = document.getElementById("loginError");
@@ -38,6 +39,22 @@ function handleLogin(e) {
     if (KS.isFirstRun()) KS.setPassword(pass);
     KS.login();
     errorEl.style.display = "none";
+
+    // كمان يسجل دخول في Firebase عشان يقدر يضيف/يعدل/يحذف منتجات
+    if (window.firebaseAuth) {
+      try {
+        await window.firebaseAuth.signInWithEmailAndPassword(
+          window.firebaseAuth.auth, FIREBASE_ADMIN_EMAIL, pass
+        );
+      } catch (err) {
+        console.error("Firebase auth sign-in error:", err);
+        // مهم: لو كلمة السر اتغيرت من لوحة التحكم لكن ما اتغيرتش في Firebase
+        // Authentication كمان، هيفشل تسجيل الدخول ده والحفظ هيرفض بعدين.
+        // لازم كلمة سر Firebase Authentication (من Firebase Console) تتطابق دايمًا
+        // مع كلمة السر بتاعة لوحة التحكم.
+      }
+    }
+
     checkAuth();
   } else {
     errorEl.style.display = "block";
@@ -46,6 +63,9 @@ function handleLogin(e) {
 
 function handleLogout() {
   KS.logout();
+  if (window.firebaseAuth) {
+    window.firebaseAuth.signOut(window.firebaseAuth.auth).catch(() => {});
+  }
   checkAuth();
 }
 
@@ -302,6 +322,7 @@ function settingsTabHTML() {
 
     <div class="card" style="max-width:480px;margin-top:20px">
       <h3 style="margin-top:0">تغيير كلمة سر الأدمن</h3>
+      <p class="form-note" style="margin-bottom:14px;color:#b3813a">⚠️ بعد تغيير كلمة السر هنا، لازم تروح لـ Firebase Console → Authentication → Users وتغيّر كلمة سر المستخدم admin@koreshstore.com لنفس القيمة الجديدة، عشان إضافة/تعديل المنتجات يفضل شغال.</p>
       <form id="passForm">
         <div class="field" style="margin-bottom:14px"><label>كلمة السر الحالية</label><input type="password" id="oldPass" required></div>
         <div class="field" style="margin-bottom:14px"><label>كلمة السر الجديدة</label><input type="password" id="newPass" required minlength="4"></div>
@@ -329,7 +350,7 @@ document.addEventListener("submit", (e) => {
       return;
     }
     KS.setPassword(newPass);
-    msg.textContent = "تم تغيير كلمة السر بنجاح ✅";
+    msg.textContent = "تم تغيير كلمة السر بنجاح ✅ — متنساش تغيّرها كمان في Firebase Authentication";
     msg.style.color = "#245c33";
     e.target.reset();
   }
