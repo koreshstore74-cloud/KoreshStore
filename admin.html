@@ -46,11 +46,6 @@
 
   <section class="page-content">
     <div class="wrap">
-      <div class="warn-note">
-        ⚠️ ملاحظة مهمة: الموقع ده موقع ثابت (Static) من غير قاعدة بيانات، فالتعديلات اللي بتعملها هنا (منتجات، شكاوى، طلبات)
-        بتتخزن في متصفحك الحالي بس. لو فتحت الموقع من جهاز تاني أو متصفح تاني، مش هتلاقي نفس البيانات. لو عايز البيانات
-        تكون واحدة وتظهر لكل زوار الموقع، محتاج نوصّل الموقع بقاعدة بيانات حقيقية — قولّي وهساعدك تضيفها.
-      </div>
       <div class="admin-tabs">
         <button class="admin-tab active" data-tab="products" onclick="switchTab('products')">المنتجات</button>
         <button class="admin-tab" data-tab="orders" onclick="switchTab('orders')">الطلبات</button>
@@ -79,6 +74,36 @@
   document.getElementById("modalOverlay").addEventListener("click", (e) => {
     if (e.target.id === "modalOverlay") closeModal();
   });
+</script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+  import {
+    getFirestore, collection, doc, getDocs, setDoc, deleteDoc, updateDoc, onSnapshot
+  } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyD3B0yXZwsukysrQhkl5iE_nAQTxU9c2L4",
+    authDomain: "koreshstore-b9206.firebaseapp.com",
+    projectId: "koreshstore-b9206",
+    storageBucket: "koreshstore-b9206.firebasestorage.app",
+    messagingSenderId: "721207539002",
+    appId: "1:721207539002:web:3335a2ccdbe87708524c03"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  window.firebaseDB = db;
+  window.firestoreAPI = { db, collection, doc, getDocs, setDoc, deleteDoc, updateDoc, onSnapshot };
+
+  // لو حد تاني عدّل منتجات من جهاز/متصفح تاني، تبويب المنتجات هنا يتحدث تلقائيًا
+  if (window.KS && typeof KS.initCloudProducts === "function") {
+    KS.initCloudProducts(() => {
+      if (typeof currentTab !== "undefined" && currentTab === "products" && typeof renderTab === "function") {
+        renderTab();
+      }
+    });
+  }
 </script>
 </body>
 </html>
