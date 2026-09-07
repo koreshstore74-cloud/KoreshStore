@@ -420,7 +420,11 @@ function videosTabHTML() {
     <div class="card" style="margin-bottom:20px">
       <h3 style="margin-top:0">رفع فيديو جديد</h3>
       <p class="form-note" style="margin-bottom:14px">اختار فيديو أو أكتر من جهاز الكمبيوتر مباشرة (مفيش أي روابط مطلوبة).</p>
-      <p class="form-note" style="margin-bottom:14px">⏳ وقت الرفع بيعتمد على حجم الفيديو وسرعة النت عندك — فيديو كبير (دقايق طويلة أو دقة عالية جدًا) ممكن ياخد وقت. لو عايز الرفع يبقى أسرع، قلّل حجم/دقة الفيديو قبل ما ترفعه.</p>
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;cursor:pointer">
+        <input type="checkbox" id="videoCompressToggle" checked>
+        <span>ضغط الفيديو تلقائيًا قبل الرفع (موصى به — بيقلل حجم الفيديو وجودته شوية عشان يترفع ويشتغل أسرع)</span>
+      </label>
+      <p class="form-note" style="margin-bottom:14px">⏳ أول مرة تستخدم الضغط، المتصفح بيحمّل أداة الضغط مرة واحدة (بتاخد شوية وقت)، وبعدها الضغط نفسه بيحصل على جهازك قبل الرفع.</p>
       <input type="file" id="videoUploadInput" accept="video/*" multiple>
       <div id="videoUploadProgress" style="margin-top:14px;display:flex;flex-direction:column;gap:8px"></div>
     </div>
@@ -449,17 +453,28 @@ function bindVideosEvents() {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
     const progressBox = document.getElementById("videoUploadProgress");
+    const compress = document.getElementById("videoCompressToggle")?.checked;
     input.disabled = true;
 
     // بيترفعوا واحد ورا التاني (مش كلهم مع بعض) عشان كل فيديو ياخد أقصى سرعة
     // إنترنت متاحة، وعشان تشوف فيديو خلص وهو ظاهر من غير ما تستنى الكل يخلصوا
     for (const file of files) {
       const row = document.createElement("div");
-      row.textContent = `جاري رفع "${file.name}"... 0%`;
+      row.textContent = `جاري تجهيز "${file.name}"...`;
       progressBox.appendChild(row);
 
+      let fileToUpload = file;
+      if (compress) {
+        try {
+          fileToUpload = await compressVideoFile(file, (msg) => { row.textContent = msg; });
+        } catch (err) {
+          console.error("compression failed, uploading original:", err);
+          fileToUpload = file;
+        }
+      }
+
       try {
-        await KS.uploadVideoCloud(file, (pct) => {
+        await KS.uploadVideoCloud(fileToUpload, (pct) => {
           row.textContent = `جاري رفع "${file.name}"... ${pct}%`;
         });
         row.textContent = `تم رفع "${file.name}" ✅`;
@@ -473,6 +488,81 @@ function bindVideosEvents() {
     e.target.value = "";
     showToast("تم رفع الفيديوهات لكل زوار الموقع");
   });
+}
+
+/* ================= ضغط الفيديو قبل الرفع (على جهاز المستخدم، بدون سيرفر) ================= */
+let _ffmpegInstance = null;
+
+function loadScriptOnce(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) return resolve();
+    const s = document.createElement("script");
+    s.src = src;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error("فشل تحميل " + src));
+    document.head.appendChild(s);
+  });
+}
+
+async function getFFmpeg(onStatus) {
+  if (_ffmpegInstance) return _ffmpegInstance;
+  onStatus("جاري تحميل أداة ضغط الفيديو (أول مرة بس)...");
+  await loadScriptOnce("https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js");
+  const { createFFmpeg } = FFmpeg;
+  _ffmpegInstance = createFFmpeg({
+    log: false,
+    corePath: "https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js"
+  });
+  await _ffmpegInstance.load();
+  return _ffmpegInstance;
+}
+
+// بيضغط الفيديو محليًا على جهاز المستخدم (من غير رفع أي حاجة على أي سيرفر خارجي غير أداة
+// الضغط نفسها اللي بتتحمل مرة واحدة)، وبيقلل الدقة والجودة عشان يبقى حجمه أصغر بكتير
+// ويترفع بسرعة. لو الضغط فشل لأي سبب، بيرجع الفيديو الأصلي زي ما هو من غير ما يوقف الرفع.
+async function compressVideoFile(file, onStatus) {
+  // فيديوهات صغيرة أصلاً (أقل من 8 م.ب) مش محتاجة ضغط، نوفر الوقت
+  if (file.size < 8 * 1024 * 1024) {
+    onStatus(`"${file.name}" صغير أصلًا، هيترفع من غير ضغط`);
+    return file;
+  }
+  try {
+    const ffmpeg = await getFFmpeg(onStatus);
+    const { fetchFile } = FFmpeg;
+    const inputName = "in_" + Date.now();
+    const outputName = "out_" + Date.now() + ".mp4";
+
+    onStatus(`جاري ضغط "${file.name}"...`);
+    ffmpeg.FS("writeFile", inputName, await fetchFile(file));
+    await ffmpeg.run(
+      "-i", inputName,
+      "-vf", "scale='min(1280,iw)':-2",
+      "-c:v", "libx264",
+      "-preset", "veryfast",
+      "-crf", "28",
+      "-c:a", "aac",
+      "-b:a", "96k",
+      outputName
+    );
+    const data = ffmpeg.FS("readFile", outputName);
+    ffmpeg.FS("unlink", inputName);
+    ffmpeg.FS("unlink", outputName);
+
+    const blob = new Blob([data.buffer], { type: "video/mp4" });
+    const newName = file.name.replace(/\.[^.]+$/, "") + "-compressed.mp4";
+    const compressed = new File([blob], newName, { type: "video/mp4" });
+
+    if (compressed.size < file.size) {
+      onStatus(`تم ضغط "${file.name}" من ${formatBytes(file.size)} لـ ${formatBytes(compressed.size)}`);
+      return compressed;
+    }
+    // لو الضغط زوّد الحجم بالغلط (نادر بس ممكن)، استخدم الأصلي
+    return file;
+  } catch (err) {
+    console.error("Video compression error:", err);
+    onStatus(`تعذّر ضغط "${file.name}"، هيترفع بحجمه الأصلي`);
+    return file;
+  }
 }
 
 async function deleteVideo(id) {

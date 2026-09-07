@@ -14,13 +14,14 @@
 
 <section class="hero">
   <div class="hero-bg-layers" id="heroBgLayers"></div>
-  <div class="wrap hero-inner">
-    <div class="hero-cta">
-      <a href="#products" class="btn btn-primary">تسوّق دلوقتي</a>
-      <a href="#" target="_blank" rel="noopener" id="askProductLink" class="btn btn-outline">اسأل عن منتج</a>
-    </div>
-  </div>
   <div class="hero-bg-dots" id="heroBgDots"></div>
+</section>
+
+<section class="hero-actions">
+  <div class="wrap hero-actions-inner">
+    <a href="#products" class="btn btn-primary">تسوّق دلوقتي</a>
+    <a href="#" target="_blank" rel="noopener" id="askProductLink" class="btn btn-outline">اسأل عن منتج</a>
+  </div>
 </section>
 
 <section class="trust-strip">
@@ -37,6 +38,19 @@
       <div class="ic">↩️</div>
       <div><h4>استبدال سهل</h4><p>خلال 14 يوم من الاستلام</p></div>
     </div>
+  </div>
+</section>
+
+<section class="section" id="videosPreview" style="display:none">
+  <div class="wrap">
+    <div class="section-head">
+      <div>
+        <h2>آخر الفيديوهات</h2>
+        <p>شوف أحدث الفيديوهات اللي رفعناها</p>
+      </div>
+      <a href="videos.html" class="btn btn-outline">كل الفيديوهات</a>
+    </div>
+    <div class="video-grid" id="homeVideoGrid"></div>
   </div>
 </section>
 
@@ -115,9 +129,24 @@
     }, 5500);
   }
 
+  function renderHomeVideos() {
+    const videos = KS.getVideos().slice(0, 3);
+    const section = document.getElementById("videosPreview");
+    const grid = document.getElementById("homeVideoGrid");
+    if (!videos.length) { section.style.display = "none"; return; }
+    section.style.display = "";
+    grid.innerHTML = videos.map(v => `
+      <div class="card video-card">
+        <video src="${v.url}" controls preload="metadata"></video>
+        <div style="margin-top:10px;font-weight:700">${v.name || "فيديو"}</div>
+      </div>
+    `).join("");
+  }
+
   bootstrapPage("home");
   updateHeroText();
   resetHeroBgTimer();
+  KS.initCloudVideos(() => renderHomeVideos());
   document.getElementById("variantOverlay").addEventListener("click", (e) => {
     if (e.target.id === "variantOverlay") closeVariantModal();
   });

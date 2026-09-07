@@ -111,7 +111,15 @@ nav.main-nav{display:flex;gap:26px;flex:1;justify-content:center;flex-wrap:wrap;
   overflow:hidden;
   position:relative;
   isolation:isolate;
+  min-height:64vh;
 }
+@media (max-width:900px){.hero{min-height:42vh;}}
+.hero-actions{
+  background:var(--sand);
+  border-bottom:1px solid var(--line);
+  padding:22px 0;
+}
+.hero-actions-inner{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;}
 .hero-bg-layers{position:absolute;inset:0;z-index:0;}
 .hero-bg-layer{
   position:absolute;inset:0;
