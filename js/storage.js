@@ -1,5 +1,5 @@
 /* ============================================================
-   Koresh Store — طبقة التخزين (localStorage)
+   Koresh Store — طبقة التخزين (localStorage + Firebase Firestore)
    ============================================================ */
 
 const KS = {
@@ -59,24 +59,74 @@ const KS = {
     return "h" + h.toString(16);
   },
 
-  // --- المنتجات ---
+  // =========================================================
+  // المنتجات — دلوقتي متزامنة مع Firebase (Firestore)
+  // بترجع فورًا من الكاش المحلي، وبتتحدّث تلقائيًا لو حصل تغيير
+  // في Firebase (من أي جهاز تاني فتح لوحة التحكم)
+  // =========================================================
+  productsCache: null,
+
   getProducts() {
+    if (this.productsCache) return this.productsCache;
     const raw = localStorage.getItem(this.KEYS.products);
-    if (!raw) {
-      this.saveProducts(DEFAULT_PRODUCTS);
-      return structuredClone(DEFAULT_PRODUCTS);
+    if (raw) {
+      try {
+        this.productsCache = JSON.parse(raw);
+        return this.productsCache;
+      } catch {}
     }
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return structuredClone(DEFAULT_PRODUCTS);
-    }
+    this.productsCache = structuredClone(DEFAULT_PRODUCTS);
+    return this.productsCache;
   },
-  saveProducts(products) {
+
+  // تشغّل مرة واحدة مع فتح الصفحة، وبتفضل "سامعة" لأي تغيير في Firebase
+  // onChange: دالة بتتنفذ كل ما البيانات تتحدث (تستخدمها عشان تعمل إعادة رسم)
+  initCloudProducts(onChange) {
+    if (!window.firestoreAPI) return;
+    const { db, collection, onSnapshot } = window.firestoreAPI;
+    onSnapshot(collection(db, "products"), (snap) => {
+      const items = [];
+      snap.forEach(docSnap => items.push(docSnap.data()));
+      items.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      if (items.length) {
+        this.productsCache = items;
+        localStorage.setItem(this.KEYS.products, JSON.stringify(items));
+      } else if (!this.productsCache || this.productsCache === DEFAULT_PRODUCTS) {
+        // أول مرة ومفيش حاجة في Firebase لسه: ارفع المنتجات الافتراضية
+        this.saveProducts(structuredClone(DEFAULT_PRODUCTS));
+      }
+      if (typeof onChange === "function") onChange(this.productsCache);
+    }, (err) => console.error("Firebase products sync error:", err));
+  },
+
+  // بتحفظ قائمة المنتجات كاملة في Firebase (وبتمسح أي منتج اتشال من القائمة)
+  async saveProducts(products) {
+    this.productsCache = products;
     localStorage.setItem(this.KEYS.products, JSON.stringify(products));
+    if (!window.firestoreAPI) return;
+    const { db, collection, doc, getDocs, setDoc, deleteDoc } = window.firestoreAPI;
+    try {
+      const existingSnap = await getDocs(collection(db, "products"));
+      const existingIds = new Set();
+      existingSnap.forEach(d => existingIds.add(d.id));
+
+      const newIds = new Set(products.map(p => p.id));
+      const toDelete = [...existingIds].filter(id => !newIds.has(id));
+
+      await Promise.all(
+        products.map((p, i) => setDoc(doc(db, "products", p.id), { ...p, order: i }))
+      );
+      await Promise.all(
+        toDelete.map(id => deleteDoc(doc(db, "products", id)))
+      );
+    } catch (err) {
+      console.error("Firebase save error:", err);
+    }
   },
+
   resetProducts() {
     localStorage.removeItem(this.KEYS.products);
+    this.productsCache = null;
   },
 
   // --- السلة ---

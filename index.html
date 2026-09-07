@@ -83,5 +83,34 @@
     if (e.target.id === "variantOverlay") closeVariantModal();
   });
 </script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+  import {
+    getFirestore, collection, doc, getDocs, setDoc, deleteDoc, updateDoc, onSnapshot
+  } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyD3B0yXZwsukysrQhkl5iE_nAQTxU9c2L4",
+    authDomain: "koreshstore-b9206.firebaseapp.com",
+    projectId: "koreshstore-b9206",
+    storageBucket: "koreshstore-b9206.firebasestorage.app",
+    messagingSenderId: "721207539002",
+    appId: "1:721207539002:web:3335a2ccdbe87708524c03"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  window.firebaseDB = db;
+  window.firestoreAPI = { db, collection, doc, getDocs, setDoc, deleteDoc, updateDoc, onSnapshot };
+
+  // منتجات المتجر بقت متزامنة مع Firebase — أي تغيير من لوحة التحكم
+  // هيظهر تلقائيًا لكل زائر فاتح الموقع، من غير ما يعمل تحديث للصفحة حتى
+  if (window.KS && typeof KS.initCloudProducts === "function") {
+    KS.initCloudProducts(() => {
+      if (typeof renderProducts === "function") renderProducts();
+    });
+  }
+</script>
 </body>
 </html>
