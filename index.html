@@ -24,7 +24,6 @@
         <a href="#" target="_blank" rel="noopener" id="askProductLink" class="btn btn-outline">اسأل عن منتج</a>
       </div>
     </div>
-    <div class="hero-3d" id="hero3d"></div>
   </div>
   <div class="hero-bg-dots" id="heroBgDots"></div>
 </section>
@@ -72,11 +71,9 @@
   <div class="modal" id="variantModal"></div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="js/data.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/layout.js"></script>
-<script src="js/hero3d.js"></script>
 <script src="js/store.js"></script>
 <script type="module" src="js/firebase-init.js"></script>
 <script>
@@ -129,7 +126,6 @@
   bootstrapPage("home");
   updateHeroText();
   resetHeroBgTimer();
-  initHero3D("hero3d");
   document.getElementById("variantOverlay").addEventListener("click", (e) => {
     if (e.target.id === "variantOverlay") closeVariantModal();
   });

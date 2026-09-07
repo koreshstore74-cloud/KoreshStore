@@ -78,8 +78,14 @@ function initAdminAuth() {
 function startAdminCloudListeners() {
   if (cloudListenersStarted) return;
   cloudListenersStarted = true;
+  // مهم: صفحة admin.html مش بتحمّل js/store.js (اللي فيه دالة renderProducts)،
+  // فـ bootstrapPage وحدها ماكنتش بتشغّل الاستماع اللحظي لمنتجات Firestore هنا،
+  // ولذلك كانت لوحة التحكم بتفضل شايفة "لا توجد منتجات" حتى لو المنتج فعلاً
+  // متضاف وظاهر في الصفحة الرئيسية. الاستماع بالشكل ده بيحل المشكلة.
+  KS.initCloudProducts(() => { if (currentTab === "products" || currentTab === "overview") renderTab(); });
   KS.initCloudOrders(() => { if (currentTab === "orders" || currentTab === "overview") renderTab(); });
   KS.initCloudComplaints(() => { if (currentTab === "complaints" || currentTab === "overview") renderTab(); });
+  KS.initCloudVideos(() => { if (currentTab === "videos") renderTab(); });
 }
 
 async function handleLogin(e) {
@@ -119,6 +125,7 @@ function renderTab() {
   if (currentTab === "products") content.innerHTML = productsTabHTML();
   if (currentTab === "complaints") content.innerHTML = complaintsTabHTML();
   if (currentTab === "orders") content.innerHTML = ordersTabHTML();
+  if (currentTab === "videos") { content.innerHTML = videosTabHTML(); bindVideosEvents(); }
   if (currentTab === "settings") { content.innerHTML = settingsTabHTML(); bindSettingsEvents(); }
 }
 
@@ -394,6 +401,84 @@ async function updateOrderStatus(id, status) {
   } catch (err) {
     console.error(err);
     showToast("حصل خطأ في التحديث");
+  }
+}
+
+/* ================= الفيديوهات ================= */
+function formatBytes(bytes) {
+  if (!bytes) return "";
+  const mb = bytes / (1024 * 1024);
+  return mb >= 1 ? `${mb.toFixed(1)} م.ب` : `${(bytes / 1024).toFixed(0)} ك.ب`;
+}
+
+function videosTabHTML() {
+  const videos = KS.getVideos();
+  return `
+    <div class="admin-toolbar">
+      <div class="form-note">${videos.length} فيديو مرفوع — بتظهر لكل زوار الموقع في صفحة "الفيديوهات"</div>
+    </div>
+    <div class="card" style="margin-bottom:20px">
+      <h3 style="margin-top:0">رفع فيديو جديد</h3>
+      <p class="form-note" style="margin-bottom:14px">اختار فيديو أو أكتر من جهاز الكمبيوتر مباشرة (مفيش أي روابط مطلوبة).</p>
+      <input type="file" id="videoUploadInput" accept="video/*" multiple>
+      <div id="videoUploadProgress" style="margin-top:14px;display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+    ${videos.length === 0 ? `<div class="empty-state">لسه مفيش فيديوهات متضافة</div>` : `
+    <div class="video-grid">
+      ${videos.map(v => `
+        <div class="card video-card">
+          <video src="${v.url}" controls preload="metadata"></video>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:10px">
+            <div style="min-width:0">
+              <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v.name || "فيديو"}</div>
+              <span class="form-note">${formatBytes(v.size)}</span>
+            </div>
+            <button class="btn btn-danger small-btn" onclick="deleteVideo('${v.id}')">حذف</button>
+          </div>
+        </div>
+      `).join("")}
+    </div>`}
+  `;
+}
+
+function bindVideosEvents() {
+  const input = document.getElementById("videoUploadInput");
+  if (!input) return;
+  input.addEventListener("change", async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    const progressBox = document.getElementById("videoUploadProgress");
+    input.disabled = true;
+
+    await Promise.all(files.map((file) => {
+      const row = document.createElement("div");
+      row.textContent = `جاري رفع "${file.name}"... 0%`;
+      progressBox.appendChild(row);
+
+      return KS.uploadVideoCloud(file, (pct) => {
+        row.textContent = `جاري رفع "${file.name}"... ${pct}%`;
+      }).then(() => {
+        row.textContent = `تم رفع "${file.name}" ✅`;
+      }).catch((err) => {
+        console.error(err);
+        row.textContent = `حصل خطأ في رفع "${file.name}"`;
+      });
+    }));
+
+    input.disabled = false;
+    e.target.value = "";
+    showToast("تم رفع الفيديوهات لكل زوار الموقع");
+  });
+}
+
+async function deleteVideo(id) {
+  if (!confirm("متأكد إنك عايز تحذف الفيديو ده؟")) return;
+  try {
+    await KS.deleteVideoCloud(id);
+    showToast("تم حذف الفيديو");
+  } catch (err) {
+    console.error(err);
+    showToast("حصل خطأ في الحذف");
   }
 }
 

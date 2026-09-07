@@ -121,7 +121,7 @@ nav.main-nav{display:flex;gap:26px;flex:1;justify-content:center;flex-wrap:wrap;
 .hero-bg-layer.active{opacity:1;}
 .hero::before{
   content:'';position:absolute;inset:0;z-index:1;
-  background:linear-gradient(100deg, rgba(20,18,37,.94) 0%, rgba(20,18,37,.78) 42%, rgba(20,18,37,.5) 100%);
+  background:linear-gradient(180deg, rgba(20,18,37,.82) 0%, rgba(20,18,37,.6) 55%, rgba(20,18,37,.82) 100%);
   pointer-events:none;
 }
 .hero-bg-dots{
@@ -132,10 +132,10 @@ nav.main-nav{display:flex;gap:26px;flex:1;justify-content:center;flex-wrap:wrap;
 .hero-bg-dots button.active{background:var(--brass-light);width:20px;border-radius:4px;}
 .hero-inner{
   position:relative;z-index:2;
-  display:grid;grid-template-columns:1.1fr .9fr;gap:40px;
-  align-items:center;padding:64px 0 48px;
+  padding:90px 0 76px;
+  max-width:640px;
 }
-@media (max-width:900px){.hero-inner{grid-template-columns:1fr;padding:40px 0;}}
+@media (max-width:900px){.hero-inner{padding:56px 0;}}
 .hero-eyebrow{color:var(--brass-light);font-weight:600;font-size:14.5px;margin-bottom:14px;}
 .hero h1{
   font-size:clamp(34px,5vw,54px);font-weight:800;line-height:1.15;margin:0 0 18px;
@@ -143,12 +143,6 @@ nav.main-nav{display:flex;gap:26px;flex:1;justify-content:center;flex-wrap:wrap;
 .hero h1 span{color:var(--brass-light);}
 .hero p{color:#cfc9e0;font-size:17px;max-width:46ch;margin-bottom:28px;}
 .hero-cta{display:flex;gap:14px;flex-wrap:wrap;}
-.hero-3d{
-  width:100%;aspect-ratio:1/1;max-width:440px;justify-self:center;
-  border-radius:50%;
-  background:radial-gradient(circle at 35% 30%, rgba(227,181,99,.25), transparent 60%);
-}
-.hero-3d canvas{border-radius:16px;}
 
 .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
@@ -336,6 +330,9 @@ footer a:hover{color:var(--brass-light);}
 @media (max-width:520px){.color-grid{grid-template-columns:1fr;}}
 
 /* ---------- Hero images manager (admin) ---------- */
+.video-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px;}
+.video-card video{width:100%;border-radius:10px;display:block;background:#000;aspect-ratio:16/9;object-fit:contain;}
+
 .hero-thumb-row{display:flex;gap:12px;flex-wrap:wrap;}
 .hero-thumb{
   position:relative;width:110px;height:74px;border-radius:10px;overflow:hidden;

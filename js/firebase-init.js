@@ -14,6 +14,9 @@ import {
 import {
   getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword
 } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
+import {
+  getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject
+} from "https://www.gstatic.com/firebasejs/12.18.0/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD3B0yXZwsukysrQhkl5iE_nAQTxU9c2L4",
@@ -27,11 +30,13 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+const storage = getStorage(app);
 
 window.firestoreAPI = {
-  db, auth,
+  db, auth, storage,
   collection, doc, getDoc, getDocs, setDoc, addDoc, deleteDoc, updateDoc, onSnapshot, query, orderBy,
-  signInWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword
+  signInWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword,
+  storageRef, uploadBytesResumable, getDownloadURL, deleteObject
 };
 
 // إشارة لباقي السكريبتات إن Firebase بقى جاهز للاستخدام

@@ -36,6 +36,7 @@ const KS = {
   _settings: null,
   _orders: [],      // متاحة بس للأدمن بعد تسجيل الدخول
   _complaints: [],  // متاحة بس للأدمن بعد تسجيل الدخول
+  _videos: [],
 
   DEFAULT_SETTINGS: {
     storeName: "Koresh Store",
@@ -68,6 +69,9 @@ const KS = {
   },
   getComplaints() {
     return this._complaints;
+  },
+  getVideos() {
+    return this._videos;
   },
 
   /* ============== الاستماع اللحظي (Realtime) ============== */
@@ -128,6 +132,21 @@ const KS = {
     });
   },
 
+  // شاشة الفيديوهات: بتتزامن لحظيًا لكل زوار الموقع زي المنتجات بالظبط
+  initCloudVideos(onChange) {
+    this.whenFirebaseReady(() => {
+      const { db, collection, query, orderBy, onSnapshot } = window.firestoreAPI;
+      onSnapshot(
+        query(collection(db, "videos"), orderBy("createdAt", "desc")),
+        (snap) => {
+          this._videos = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          onChange && onChange();
+        },
+        (err) => console.error("videos snapshot error:", err)
+      );
+    });
+  },
+
   /* ============== الكتابة (Firestore) ============== */
   async saveProductCloud(product) {
     await this.whenFirebaseReadyPromise();
@@ -170,6 +189,56 @@ const KS = {
     await this.whenFirebaseReadyPromise();
     const { db, doc, deleteDoc } = window.firestoreAPI;
     await deleteDoc(doc(db, "complaints", id));
+  },
+
+  // رفع فيديو من جهاز الكمبيوتر مباشرة: بيتخزن الملف نفسه في Firebase Storage
+  // (لأنه تقيل على Firestore)، وبيتسجل رابطه في مجموعة "videos" في Firestore
+  // عشان يظهر لحظيًا لكل زوار الموقع في صفحة "الفيديوهات".
+  async uploadVideoCloud(file, onProgress) {
+    await this.whenFirebaseReadyPromise();
+    const { storage, storageRef, uploadBytesResumable, getDownloadURL, db, doc, setDoc } = window.firestoreAPI;
+    const path = `videos/${this.uid()}-${file.name}`;
+    const ref = storageRef(storage, path);
+    const task = uploadBytesResumable(ref, file);
+
+    return new Promise((resolve, reject) => {
+      task.on(
+        "state_changed",
+        (snap) => {
+          const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
+          onProgress && onProgress(pct);
+        },
+        (err) => reject(err),
+        async () => {
+          try {
+            const url = await getDownloadURL(task.snapshot.ref);
+            const id = this.uid();
+            await setDoc(doc(db, "videos", id), {
+              id,
+              url,
+              path,
+              name: file.name,
+              size: file.size,
+              createdAt: Date.now()
+            });
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        }
+      );
+    });
+  },
+  async deleteVideoCloud(id) {
+    await this.whenFirebaseReadyPromise();
+    const { db, doc, deleteDoc, getDoc, storage, storageRef, deleteObject } = window.firestoreAPI;
+    const ref = doc(db, "videos", id);
+    const snap = await getDoc(ref);
+    const data = snap.exists() ? snap.data() : null;
+    if (data?.path) {
+      try { await deleteObject(storageRef(storage, data.path)); } catch (err) { console.error("storage delete error:", err); }
+    }
+    await deleteDoc(ref);
   },
 
   /* ============== القراءة بمعرّف واحد (للتتبع العام) ============== */

@@ -39,6 +39,7 @@ function renderLayout(activePage) {
     { href: "index.html", label: "الرئيسية", key: "home" },
     { href: "index.html#products", label: "المنتجات", key: "products" },
     { href: "track-order.html", label: "تتبّع طلبك", key: "track" },
+    { href: "videos.html", label: "الفيديوهات", key: "videos" },
     { href: "complaints.html", label: "الشكاوى والاقتراحات", key: "complaints" },
     { href: "policies.html", label: "سياسات المتجر", key: "policies" }
   ];
