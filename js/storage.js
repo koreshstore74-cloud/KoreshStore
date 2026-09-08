@@ -191,54 +191,58 @@ const KS = {
     await deleteDoc(doc(db, "complaints", id));
   },
 
-  // رفع فيديو من جهاز الكمبيوتر مباشرة: بيتخزن الملف نفسه في Firebase Storage
-  // (لأنه تقيل على Firestore)، وبيتسجل رابطه في مجموعة "videos" في Firestore
-  // عشان يظهر لحظيًا لكل زوار الموقع في صفحة "الفيديوهات".
+  // رفع فيديو من جهاز الكمبيوتر مباشرة: بيترفع لحساب Cloudinary المجاني بتاعنا
+  // (بدل Firebase Storage اللي بقى محتاج خطة مدفوعة)، وبيتسجل رابطه في مجموعة
+  // "videos" في Firestore عشان يظهر لحظيًا لكل زوار الموقع في صفحة "الفيديوهات".
+  CLOUDINARY_CLOUD_NAME: "jivhefid",
+  CLOUDINARY_UPLOAD_PRESET: "fw1zbdrm",
+
   async uploadVideoCloud(file, onProgress) {
     await this.whenFirebaseReadyPromise();
-    const { storage, storageRef, uploadBytesResumable, getDownloadURL, db, doc, setDoc } = window.firestoreAPI;
-    const path = `videos/${this.uid()}-${file.name}`;
-    const ref = storageRef(storage, path);
-    const task = uploadBytesResumable(ref, file);
+    const { db, doc, setDoc } = window.firestoreAPI;
 
-    return new Promise((resolve, reject) => {
-      task.on(
-        "state_changed",
-        (snap) => {
-          const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
+    const url = `https://api.cloudinary.com/v1_1/${this.CLOUDINARY_CLOUD_NAME}/video/upload`;
+    const form = new FormData();
+    form.append("file", file);
+    form.append("upload_preset", this.CLOUDINARY_UPLOAD_PRESET);
+
+    const result = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", url);
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 100);
           onProgress && onProgress(pct);
-        },
-        (err) => reject(err),
-        async () => {
-          try {
-            const url = await getDownloadURL(task.snapshot.ref);
-            const id = this.uid();
-            await setDoc(doc(db, "videos", id), {
-              id,
-              url,
-              path,
-              name: file.name,
-              size: file.size,
-              createdAt: Date.now()
-            });
-            resolve();
-          } catch (err) {
-            reject(err);
-          }
         }
-      );
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(JSON.parse(xhr.responseText));
+        } else {
+          reject(new Error("Cloudinary upload failed: " + xhr.status + " " + xhr.responseText));
+        }
+      };
+      xhr.onerror = () => reject(new Error("Cloudinary network error"));
+      xhr.send(form);
+    });
+
+    const id = this.uid();
+    await setDoc(doc(db, "videos", id), {
+      id,
+      url: result.secure_url,
+      cloudinaryPublicId: result.public_id,
+      name: file.name,
+      size: file.size,
+      createdAt: Date.now()
     });
   },
+  // بيشيل الفيديو من قايمة الموقع فورًا. الملف نفسه بيفضل محفوظ على Cloudinary
+  // (حذفه فعليًا من هناك محتاج مفتاح سري متاح بس من السيرفر، مش من المتصفح،
+  // فمينفعش يتعمل من هنا بأمان).
   async deleteVideoCloud(id) {
     await this.whenFirebaseReadyPromise();
-    const { db, doc, deleteDoc, getDoc, storage, storageRef, deleteObject } = window.firestoreAPI;
-    const ref = doc(db, "videos", id);
-    const snap = await getDoc(ref);
-    const data = snap.exists() ? snap.data() : null;
-    if (data?.path) {
-      try { await deleteObject(storageRef(storage, data.path)); } catch (err) { console.error("storage delete error:", err); }
-    }
-    await deleteDoc(ref);
+    const { db, doc, deleteDoc } = window.firestoreAPI;
+    await deleteDoc(doc(db, "videos", id));
   },
 
   /* ============== القراءة بمعرّف واحد (للتتبع العام) ============== */

@@ -129,7 +129,7 @@ nav.main-nav{display:flex;gap:26px;flex:1;justify-content:center;flex-wrap:wrap;
 .hero-bg-layer.active{opacity:1;}
 .hero::before{
   content:'';position:absolute;inset:0;z-index:1;
-  background:linear-gradient(180deg, rgba(20,18,37,.82) 0%, rgba(20,18,37,.6) 55%, rgba(20,18,37,.82) 100%);
+  background:linear-gradient(180deg, rgba(20,18,37,.12) 0%, rgba(20,18,37,.04) 55%, rgba(20,18,37,.18) 100%);
   pointer-events:none;
 }
 .hero-bg-dots{
